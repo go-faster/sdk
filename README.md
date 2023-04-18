@@ -1,4 +1,4 @@
-# sdk [![codecov](https://codecov.io/gh/go-faster/sdk/branch/main/graph/badge.svg?token=cEE7AZ38Ho)](https://codecov.io/gh/go-faster/sdk) [![Go Reference](https://pkg.go.dev/badge/github.com/go-faster/sdk.svg)](https://pkg.go.dev/github.com/go-faster/sdk)
+# sdk [![codecov](https://codecov.io/gh/go-faster/sdk/branch/main/graph/badge.svg?token=cEE7AZ38Ho)](https://codecov.io/gh/go-faster/sdk) [![Go Reference](https://pkg.go.dev/badge/github.com/go-faster/sdk.svg)](https://pkg.go.dev/github.com/go-faster/sdk) [![experimental](https://img.shields.io/badge/-experimental-blueviolet)](https://go-faster.org/docs/projects/status#experimental)
 WIP
 
 
