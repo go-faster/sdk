@@ -95,6 +95,12 @@ func writeFile(t testing.TB, data []byte, elems ...string) {
 	require.NoError(t, os.WriteFile(p, data, 0o600), "write golden file")
 }
 
+// NormalizeNewlines normalizes \r\n (windows) and \r (mac)
+// into \n (unix).
+func NormalizeNewlines(s string) string {
+	return string(normalizeNewlines([]byte(s)))
+}
+
 // normalizeNewlines normalizes \r\n (windows) and \r (mac)
 // into \n (unix).
 func normalizeNewlines(d []byte) []byte {
