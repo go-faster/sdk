@@ -10,6 +10,7 @@ WIP SDK from go-faster for instrumentation.
 | `autotracer` | Automatic OpenTelemetry TracerProvider from environment |
 | `profiler`   | Explicit pprof routes                                   |
 | `zctx`       | context.Context and tracing support for zap             |
+| `gold`       | Golden files in tests                                   |
 
 ## TODO
 - [ ] Use slog
