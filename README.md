@@ -14,6 +14,10 @@ WIP SDK from go-faster for instrumentation.
 
 ## TODO
 - [ ] Use slog
+- [ ] Support for short-lived tasks
+  - [ ] Metric, trace push
+  - [ ] No need for http listeners for profiling
+- [ ] Pyroscope compat
 
 
 ## Code coverage 
