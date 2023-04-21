@@ -17,6 +17,21 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
+func newTestTracer() trace.Tracer {
+	exporter := tracetest.NewInMemoryExporter()
+	randSource := rand.NewSource(15)
+	tp := tracesdk.NewTracerProvider(
+		// Using deterministic random ids.
+		tracesdk.WithIDGenerator(&randomIDGenerator{
+			rand: rand.New(randSource),
+		}),
+		tracesdk.WithBatcher(exporter,
+			tracesdk.WithBatchTimeout(0), // instant
+		),
+	)
+	return tp.Tracer("test")
+}
+
 func assertEmpty(t testing.TB, logs *observer.ObservedLogs) {
 	t.Helper()
 	assert.Equal(t, 0, logs.Len(), "Expected empty ObservedLogs to have zero length.")
@@ -122,19 +137,7 @@ func TestFrom(t *testing.T) {
 		Context: []zapcore.Field{zap.Int("i", 1), zap.Int("j", 2)},
 	})
 
-	exporter := tracetest.NewInMemoryExporter()
-	randSource := rand.NewSource(15)
-	tp := tracesdk.NewTracerProvider(
-		// Using deterministic random ids.
-		tracesdk.WithIDGenerator(&randomIDGenerator{
-			rand: rand.New(randSource),
-		}),
-		tracesdk.WithBatcher(exporter,
-			tracesdk.WithBatchTimeout(0), // instant
-		),
-	)
-
-	tracer := tp.Tracer("test")
+	tracer := newTestTracer()
 	do(ctx, tracer, 3)
 	want := []observer.LoggedEntry{
 		{
