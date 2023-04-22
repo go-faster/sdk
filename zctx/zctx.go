@@ -40,6 +40,9 @@ func from(ctx context.Context) logger {
 }
 
 // Start allocates new span logger and returns new context with it.
+// Use Start to reduce allocations during From, caching the span-scoped logger.
+//
+// Should be same as ctx = With(ctx), but more effective.
 func Start(ctx context.Context) (context.Context, *zap.Logger) {
 	v := from(ctx)
 	s := trace.SpanContextFromContext(ctx)
@@ -88,7 +91,7 @@ func With(ctx context.Context, fields ...zap.Field) context.Context {
 	} else if s.IsValid() {
 		// New span. Caching logger.
 		//
-		// Next call to From  in same span
+		// Next call to From in same span
 		// will return cached logger.
 		v.SetSpan(s)
 	} else {
