@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -54,15 +55,17 @@ func getEnvOr(name, def string) string {
 	return def
 }
 
-func noop(_ context.Context) error { return nil }
+func noopHandler(_ context.Context) error { return nil }
 
 type stoppableReader interface {
 	sdkmetric.Reader
 	Shutdown(ctx context.Context) error
 }
 
+// ShutdownFunc is a function that shuts down the MeterProvider.
 type ShutdownFunc func(ctx context.Context) error
 
+// NewMeterProvider returns new metric.MeterProvider based on environment variables.
 func NewMeterProvider(ctx context.Context, options ...Option) (
 	meterProvider metric.MeterProvider,
 	meterShutdown ShutdownFunc,
@@ -137,7 +140,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		}
 		return ret(sdkmetric.NewPeriodicReader(exp))
 	case expNone:
-		return metric.NewNoopMeterProvider(), noop, nil
+		return noop.NewMeterProvider(), noopHandler, nil
 	default:
 		return nil, nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)
 	}
