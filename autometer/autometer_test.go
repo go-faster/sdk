@@ -30,4 +30,24 @@ func TestNewMeterProvider(t *testing.T) {
 		require.Nil(t, meter)
 		require.Nil(t, stop)
 	})
+	t.Run("All", func(t *testing.T) {
+		for _, exp := range []string{
+			"none",
+			"stdout",
+			"stderr",
+			// "otlp", // TODO: add non-blocking dial
+			"prometheus",
+		} {
+			t.Run(exp, func(t *testing.T) {
+				t.Setenv("OTEL_METRICS_EXPORTER", exp)
+				meter, stop, err := autometer.NewMeterProvider(ctx, autometer.WithResource(res))
+				require.NoError(t, err)
+				require.NotNil(t, meter)
+				require.NotNil(t, stop)
+
+				_ = meter.Meter("test")
+				require.NoError(t, stop(ctx))
+			})
+		}
+	})
 }
