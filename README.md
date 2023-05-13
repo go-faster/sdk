@@ -11,6 +11,7 @@ WIP SDK from go-faster for instrumentation.
 | `profiler`   | Explicit pprof routes                                   |
 | `zctx`       | context.Context and tracing support for zap             |
 | `gold`       | Golden files in tests                                   |
+| `app`        | Automatic setup observability and run daemon            |
 
 ## TODO
 - [ ] Use slog
