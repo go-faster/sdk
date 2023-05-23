@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -135,7 +134,7 @@ func (m *Metrics) registerPrometheus() {
 
 func (m *Metrics) MeterProvider() metric.MeterProvider {
 	if m.meterProvider == nil {
-		return global.MeterProvider()
+		return otel.GetMeterProvider()
 	}
 	return m.meterProvider
 }
@@ -267,7 +266,7 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 	}
 
 	// Register global OTEL providers.
-	global.SetMeterProvider(m.MeterProvider())
+	otel.SetMeterProvider(m.MeterProvider())
 	otel.SetTracerProvider(m.TracerProvider())
 	otel.SetTextMapPropagator(m.TextMapPropagator())
 
