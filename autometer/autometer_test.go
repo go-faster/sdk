@@ -2,6 +2,7 @@ package autometer_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestNewMeterProvider(t *testing.T) {
 		} {
 			t.Run(exp, func(t *testing.T) {
 				t.Setenv("OTEL_METRICS_EXPORTER", exp)
-				meter, stop, err := autometer.NewMeterProvider(ctx, autometer.WithResource(res))
+				meter, stop, err := autometer.NewMeterProvider(ctx, autometer.WithResource(res), autometer.WithWriter(io.Discard))
 				require.NoError(t, err)
 				require.NotNil(t, meter)
 				require.NotNil(t, stop)

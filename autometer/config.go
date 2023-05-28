@@ -1,13 +1,16 @@
 package autometer
 
 import (
+	"io"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res *resource.Resource
+	res    *resource.Resource
+	writer io.Writer
 
 	prom         prometheus.Registerer
 	promCallback func(reg *prometheus.Registry)
@@ -58,6 +61,14 @@ func WithPrometheusRegisterer(reg prometheus.Registerer) Option {
 func WithOnPrometheusRegistry(f func(reg *prometheus.Registry)) Option {
 	return optionFunc(func(conf config) config {
 		conf.promCallback = f
+		return conf
+	})
+}
+
+// WithWriter sets writer for the stderr, stdout exporters.
+func WithWriter(out io.Writer) Option {
+	return optionFunc(func(conf config) config {
+		conf.writer = out
 		return conf
 	})
 }

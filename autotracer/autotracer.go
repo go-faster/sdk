@@ -100,7 +100,11 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 			return nil, nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
 		}
 	case writerStdout, writerStderr:
-		exp, err := stdouttrace.New(stdouttrace.WithWriter(writerByName(exporter)))
+		writer := cfg.writer
+		if writer == nil {
+			writer = writerByName(exporter)
+		}
+		exp, err := stdouttrace.New(stdouttrace.WithWriter(writer))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, exporter)
 		}
