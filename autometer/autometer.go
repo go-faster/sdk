@@ -133,7 +133,11 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 			return nil, nil, fmt.Errorf("unsupported metric otlp protocol %q", proto)
 		}
 	case writerStdout, writerStderr:
-		enc := json.NewEncoder(writerByName(exporter))
+		writer := cfg.writer
+		if writer == nil {
+			writer = writerByName(exporter)
+		}
+		enc := json.NewEncoder(writer)
 		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, exporter)

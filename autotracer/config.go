@@ -1,12 +1,15 @@
 package autotracer
 
 import (
+	"io"
+
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res *resource.Resource
+	res    *resource.Resource
+	writer io.Writer
 }
 
 // newConfig returns a config configured with options.
@@ -40,6 +43,14 @@ func (o optionFunc) apply(conf config) config {
 func WithResource(res *resource.Resource) Option {
 	return optionFunc(func(conf config) config {
 		conf.res = res
+		return conf
+	})
+}
+
+// WithWriter sets writer for the stderr, stdout exporters.
+func WithWriter(out io.Writer) Option {
+	return optionFunc(func(conf config) config {
+		conf.writer = out
 		return conf
 	})
 }
