@@ -223,11 +223,8 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 		resource: res,
 		mux:      mux,
 		srv: &http.Server{
-			Handler:           mux,
-			Addr:              addr,
-			ReadHeaderTimeout: time.Second,
-			ReadTimeout:       time.Second,
-			WriteTimeout:      time.Second,
+			Handler: mux,
+			Addr:    addr,
 		},
 	}
 
