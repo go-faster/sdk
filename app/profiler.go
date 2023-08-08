@@ -1,6 +1,7 @@
 package app
 
 import (
+	"net/http"
 	"os"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/go-faster/sdk/profiler"
 )
 
-func (m *Metrics) registerProfiler() {
+func (m *Metrics) registerProfiler(mux *http.ServeMux) {
 	var routes []string
 	if v := os.Getenv("PPROF_ROUTES"); v != "" {
 		routes = strings.Split(v, ",")
@@ -23,5 +24,5 @@ func (m *Metrics) registerProfiler() {
 			m.lg.Warn("Unknown pprof route", zap.String("route", route))
 		},
 	}
-	m.mux.Handle("/debug/pprof/", profiler.New(opt))
+	mux.Handle("/debug/pprof/", profiler.New(opt))
 }

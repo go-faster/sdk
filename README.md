@@ -15,23 +15,28 @@ WIP SDK from go-faster for instrumentation.
 
 ## Environment variables
 
-| Name                                  | Description                    | Example            | Default                |
-|---------------------------------------|--------------------------------|--------------------|------------------------|
-| `OTEL_RESOURCE_ATTRIBUTES`            | OTEL Resource attributes       | `service.name=app` |                        |
-| `OTEL_SERVICE_NAME`                   | OTEL Service name              | `app`              | `unknown_service`      |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol to use           | `http`             | `grpc`                 |
-| `OTEL_PROPAGATORS`                    | OTEL Propagators               | `none`             | `tracecontext,baggage` |
-| `PPROF_ROUTES`                        | List of enabled pprof routes   | `cmdline,profile`  | See below              |
-| `OTEL_LOG_LEVEL`                      | Log level                      | `debug`            | `info`                 |
-| `METRICS_ADDR`                        | Address with metrics and pprof | `localhost:9464`   | Prometheus addr        |
-| `OTEL_METRICS_EXPORTER`               | Metrics exporter to use        | `prometheus`       | `none`                 |
-| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use   | `http`             | `grpc`                 |
-| `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr        | `0.0.0.0`          | `localhost`            |
-| `OTEL_EXPORTER_PROMETHEUS_PORT`       | Port of prometheus addr        | `9090`             | `9464`                 |
-| `OTEL_TRACES_EXPORTER`                | Traces exporter to use         | `jaeger`           | `none`                 |
-| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use    | `http`             | `grpc`                 |
-| `OTEL_EXPORTER_JAEGER_AGENT_HOST`     | Jaeger exporter host           | `jaeger.svc.local` | `localhost`            |
-| `OTEL_EXPORTER_JAEGER_AGENT_PORT`     | Jaeger exporter port           | `6831`             | `6831`                 |
+⚠️ The pprof listener is disabled by default and should be explicitly enabled by `PPROF_ADDR`.
+
+Metrics and pprof can be served from same address if needed, set both addresses to the same value.
+
+| Name                                  | Description                     | Example            | Default                |
+|---------------------------------------|---------------------------------|--------------------|------------------------|
+| `OTEL_RESOURCE_ATTRIBUTES`            | OTEL Resource attributes        | `service.name=app` |                        |
+| `OTEL_SERVICE_NAME`                   | OTEL Service name               | `app`              | `unknown_service`      |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol to use            | `http`             | `grpc`                 |
+| `OTEL_PROPAGATORS`                    | OTEL Propagators                | `none`             | `tracecontext,baggage` |
+| `PPROF_ROUTES`                        | List of enabled pprof routes    | `cmdline,profile`  | See below              |
+| `PPROF_ADDR`                          | Enable pprof and listen on addr | `0.0.0.0:9010`     | N/A                    |
+| `OTEL_LOG_LEVEL`                      | Log level                       | `debug`            | `info`                 |
+| `METRICS_ADDR`                        | Address with metrics and pprof  | `localhost:9464`   | Prometheus addr        |
+| `OTEL_METRICS_EXPORTER`               | Metrics exporter to use         | `prometheus`       | `none`                 |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use    | `http`             | `grpc`                 |
+| `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr         | `0.0.0.0`          | `localhost`            |
+| `OTEL_EXPORTER_PROMETHEUS_PORT`       | Port of prometheus addr         | `9090`             | `9464`                 |
+| `OTEL_TRACES_EXPORTER`                | Traces exporter to use          | `jaeger`           | `none`                 |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use     | `http`             | `grpc`                 |
+| `OTEL_EXPORTER_JAEGER_AGENT_HOST`     | Jaeger exporter host            | `jaeger.svc.local` | `localhost`            |
+| `OTEL_EXPORTER_JAEGER_AGENT_PORT`     | Jaeger exporter port            | `6831`             | `6831`                 |
 
 ### Routes for pprof
 
