@@ -28,7 +28,7 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 | `PPROF_ROUTES`                        | List of enabled pprof routes    | `cmdline,profile`  | See below              |
 | `PPROF_ADDR`                          | Enable pprof and listen on addr | `0.0.0.0:9010`     | N/A                    |
 | `OTEL_LOG_LEVEL`                      | Log level                       | `debug`            | `info`                 |
-| `METRICS_ADDR`                        | Address with metrics and pprof  | `localhost:9464`   | Prometheus addr        |
+| `METRICS_ADDR`                        | Prometheus addr (fallback)      | `localhost:9464`   | Prometheus addr        |
 | `OTEL_METRICS_EXPORTER`               | Metrics exporter to use         | `prometheus`       | `none`                 |
 | `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use    | `http`             | `grpc`                 |
 | `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr         | `0.0.0.0`          | `localhost`            |
