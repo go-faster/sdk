@@ -234,13 +234,14 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 		if v := os.Getenv("METRICS_ADDR"); v != "" {
 			promAddr = v
 		}
+		mux := http.NewServeMux()
 		e := httpEndpoint{
-			srv:      &http.Server{Addr: promAddr},
+			srv:      &http.Server{Addr: promAddr, Handler: mux},
 			services: []string{"prometheus"},
 			addr:     promAddr,
-			mux:      http.NewServeMux(),
+			mux:      mux,
 		}
-		e.mux.Handle("/metrics",
+		mux.Handle("/metrics",
 			promhttp.HandlerFor(m.prom, promhttp.HandlerOpts{}),
 		)
 		m.http = append(m.http, e)
@@ -261,10 +262,11 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 		}
 		if he.srv == nil {
 			// Creating new endpoint.
+			mux := http.NewServeMux()
 			he = httpEndpoint{
-				srv:      &http.Server{Addr: v},
+				srv:      &http.Server{Addr: v, Handler: mux},
 				addr:     v,
-				mux:      http.NewServeMux(),
+				mux:      mux,
 				services: []string{serviceName},
 			}
 		}
