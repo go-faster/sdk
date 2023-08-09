@@ -14,5 +14,8 @@ func main() {
 		<-ctx.Done()
 		lg.Info("Goodbye, world!")
 		return nil
-	})
+	},
+		// Configure custom zap config.
+		app.WithZapConfig(zap.NewDevelopmentConfig()),
+	)
 }

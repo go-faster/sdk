@@ -33,30 +33,35 @@ const (
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
 // Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
 // with exitCodeWatchdog.
-func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error) {
+func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Option) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	cfg := zap.NewProductionConfig()
+	// Apply options.
+	opts := options{
+		cfg: zap.NewProductionConfig(),
+	}
+	for _, o := range op {
+		o.apply(&opts)
+	}
+
+	// Setup logger.
 	if s := os.Getenv("OTEL_LOG_LEVEL"); s != "" {
 		var lvl zapcore.Level
 		if err := lvl.UnmarshalText([]byte(s)); err != nil {
 			panic(err)
 		}
-		cfg.Level.SetLevel(lvl)
+		opts.cfg.Level.SetLevel(lvl)
 	}
-	lg, err := cfg.Build()
+	lg, err := opts.cfg.Build()
 	if err != nil {
 		panic(err)
 	}
-
-	lg.Info("Starting")
-
 	defer func() { _ = lg.Sync() }()
-
 	// Add logger to root context.
 	ctx = zctx.Base(ctx, lg)
 
+	lg.Info("Starting")
 	m, err := newMetrics(ctx, lg.Named("metrics"))
 	if err != nil {
 		panic(err)
