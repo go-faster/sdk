@@ -173,7 +173,20 @@ func (z zapErrorHandler) Handle(err error) {
 	z.lg.Error("Error", zap.Error(err))
 }
 
-func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
+// include clones slice and appends values to it.
+func include[S []E, E any](s S, v ...E) S {
+	out := make(S, len(s)+len(v))
+	copy(out, s)
+	copy(out[len(s):], v)
+	return s
+}
+
+func newMetrics(
+	ctx context.Context,
+	lg *zap.Logger,
+	meterOptions []autometer.Option,
+	tracerOptions []autotracer.Option,
+) (*Metrics, error) {
 	{
 		// Setup global OTEL logger and error handler.
 		logger := lg.Named("otel")
@@ -189,7 +202,11 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 		resource: res,
 	}
 	{
-		provider, stop, err := autotracer.NewTracerProvider(ctx, autotracer.WithResource(res))
+		provider, stop, err := autotracer.NewTracerProvider(ctx,
+			include(tracerOptions,
+				autotracer.WithResource(res),
+			)...,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "tracer provider")
 		}
@@ -198,10 +215,12 @@ func newMetrics(ctx context.Context, lg *zap.Logger) (*Metrics, error) {
 	}
 	{
 		provider, stop, err := autometer.NewMeterProvider(ctx,
-			autometer.WithResource(res),
-			autometer.WithOnPrometheusRegistry(func(reg *promClient.Registry) {
-				m.prom = reg
-			}),
+			include(meterOptions,
+				autometer.WithResource(res),
+				autometer.WithOnPrometheusRegistry(func(reg *promClient.Registry) {
+					m.prom = reg
+				}),
+			)...,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "meter provider")

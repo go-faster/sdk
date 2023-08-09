@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"io"
 
 	"go.uber.org/zap"
 
 	"github.com/go-faster/sdk/app"
+	"github.com/go-faster/sdk/autometer"
+	"github.com/go-faster/sdk/autotracer"
 )
 
 func main() {
@@ -17,5 +20,9 @@ func main() {
 	},
 		// Configure custom zap config.
 		app.WithZapConfig(zap.NewDevelopmentConfig()),
+
+		// Redirect metrics and traces to /dev/null.
+		app.WithMeterOptions(autometer.WithWriter(io.Discard)),
+		app.WithTracerOptions(autotracer.WithWriter(io.Discard)),
 	)
 }

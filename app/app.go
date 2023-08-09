@@ -62,7 +62,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	ctx = zctx.Base(ctx, lg)
 
 	lg.Info("Starting")
-	m, err := newMetrics(ctx, lg.Named("metrics"))
+	m, err := newMetrics(ctx, lg.Named("metrics"), opts.meterOptions, opts.tracerOptions)
 	if err != nil {
 		panic(err)
 	}
