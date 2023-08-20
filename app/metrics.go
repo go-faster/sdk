@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -89,18 +88,17 @@ func (m *Metrics) run(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 
-		return m.shutdown(ctx)
+		// Not returning error, just reporting to log.
+		m.shutdown(ctx)
+
+		return nil
 	})
 
 	return wg.Wait()
 }
 
-func (m *Metrics) shutdown(ctx context.Context) error {
-	var (
-		wg   sync.WaitGroup
-		l    sync.Mutex
-		errs []error
-	)
+func (m *Metrics) shutdown(ctx context.Context) {
+	var wg sync.WaitGroup
 
 	// Launch shutdowns in parallel.
 	wg.Add(len(m.shutdowns))
@@ -115,10 +113,7 @@ func (m *Metrics) shutdown(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			if err := f(ctx); err != nil {
-				e := errors.Wrapf(err, "shutdown %s", n)
-				l.Lock()
-				errs = append(errs, e)
-				l.Unlock()
+				m.lg.Error("Failed to shutdown", zap.Error(err), zap.String("name", n))
 			}
 		}()
 	}
@@ -126,13 +121,6 @@ func (m *Metrics) shutdown(ctx context.Context) error {
 	// Wait for all shutdowns to finish.
 	m.lg.Info("Waiting for shutdowns", zap.Strings("shutdowns", shutdowns))
 	wg.Wait()
-
-	// Combine all shutdown errors.
-	l.Lock()
-	err := multierr.Combine(errs...)
-	l.Unlock()
-
-	return err
 }
 
 func (m *Metrics) MeterProvider() metric.MeterProvider {
