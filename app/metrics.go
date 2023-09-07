@@ -161,14 +161,6 @@ func (z zapErrorHandler) Handle(err error) {
 	z.lg.Error("Error", zap.Error(err))
 }
 
-// include clones slice and appends values to it.
-func include[S []E, E any](s S, v ...E) S {
-	out := make(S, len(s)+len(v))
-	copy(out, s)
-	copy(out[len(s):], v)
-	return s
-}
-
 func newMetrics(
 	ctx context.Context,
 	lg *zap.Logger,
