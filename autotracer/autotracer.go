@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/go-faster/errors"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -18,9 +17,8 @@ import (
 )
 
 const (
-	expOTLP   = "otlp"
-	expNone   = "none" // no-op
-	expJaeger = "jaeger"
+	expOTLP = "otlp"
+	expNone = "none" // no-op
 
 	protoHTTP    = "http"
 	protoGRPC    = "grpc"
@@ -69,12 +67,6 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		return sdktrace.NewTracerProvider(traceOptions...), e.Shutdown, nil
 	}
 	switch exporter := strings.TrimSpace(getEnvOr("OTEL_TRACES_EXPORTER", expOTLP)); exporter {
-	case expJaeger:
-		exp, err := jaeger.New(jaeger.WithAgentEndpoint())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "jaeger")
-		}
-		return ret(exp)
 	case expOTLP:
 		proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
 		if proto == "" {

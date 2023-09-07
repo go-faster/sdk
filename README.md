@@ -33,10 +33,8 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 | `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use    | `http`             | `grpc`                 |
 | `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr         | `0.0.0.0`          | `localhost`            |
 | `OTEL_EXPORTER_PROMETHEUS_PORT`       | Port of prometheus addr         | `9090`             | `9464`                 |
-| `OTEL_TRACES_EXPORTER`                | Traces exporter to use          | `jaeger`           | `otlp`                 |
+| `OTEL_TRACES_EXPORTER`                | Traces exporter to use          | `otlp`             | `otlp`                 |
 | `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use     | `http`             | `grpc`                 |
-| `OTEL_EXPORTER_JAEGER_AGENT_HOST`     | Jaeger exporter host            | `jaeger.svc.local` | `localhost`            |
-| `OTEL_EXPORTER_JAEGER_AGENT_PORT`     | Jaeger exporter port            | `6831`             | `6831`                 |
 
 ### Routes for pprof
 
