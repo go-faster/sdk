@@ -268,6 +268,7 @@ func newMetrics(
 				mux:      mux,
 				services: []string{serviceName},
 			}
+			m.http = append(m.http, he)
 		}
 		m.registerProfiler(he.mux)
 	}
