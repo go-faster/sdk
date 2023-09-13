@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/autoprop v0.43.0
 	go.opentelemetry.io/otel v1.18.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.40.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.40.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.41.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.18.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.18.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.40.0
@@ -19,7 +19,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.17.0
 	go.opentelemetry.io/otel/metric v1.18.0
 	go.opentelemetry.io/otel/sdk v1.18.0
-	go.opentelemetry.io/otel/sdk/metric v0.40.0
+	go.opentelemetry.io/otel/sdk/metric v0.41.0
 	go.opentelemetry.io/otel/trace v1.18.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/sync v0.3.0
@@ -43,7 +43,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.18.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.18.0 // indirect
 	go.opentelemetry.io/contrib/propagators/ot v1.18.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.40.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.41.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.18.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
