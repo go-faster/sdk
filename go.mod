@@ -8,7 +8,7 @@ require (
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.43.0
-	go.opentelemetry.io/contrib/propagators/autoprop v0.43.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.44.0
 	go.opentelemetry.io/otel v1.18.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.41.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.41.0
@@ -39,10 +39,10 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.18.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.41.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.18.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
