@@ -36,6 +36,22 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 | `OTEL_TRACES_EXPORTER`                | Traces exporter to use          | `otlp`             | `otlp`                 |
 | `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use     | `http`             | `grpc`                 |
 
+### Metrics exporters
+
+| Value        | Description                 |
+|--------------|-----------------------------|
+| `otlp`       | **OTLP exporter (default)** |
+| `prometheus` | Prometheus exporter         |
+| `none`       | No exporter                 |
+
+### Trace exporters
+
+| Value  | Description                 |
+|--------|-----------------------------|
+| `otlp` | **OTLP exporter (default)** |
+| `none` | No exporter                 |
+
+
 ### Routes for pprof
 
 List of enabled pprof routes
