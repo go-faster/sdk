@@ -15,7 +15,8 @@ WIP SDK from go-faster for instrumentation.
 
 ## Environment variables
 
-⚠️ The pprof listener is disabled by default and should be explicitly enabled by `PPROF_ADDR`.
+> [!WARNING]
+> The pprof listener is disabled by default and should be explicitly enabled by `PPROF_ADDR`.
 
 Metrics and pprof can be served from same address if needed, set both addresses to the same value.
 
