@@ -53,6 +53,26 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 | `none` | No exporter                 |
 
 
+### Defaults
+
+By default, OpenTelemetry SDK tries `localhost:4318` OTLP endpoint, assuming collector is running on the localhost.
+
+If that is not true, following errors can be seen in the logs:
+
+```json
+{"error": "failed to upload metrics: Post \"https://localhost:4318/v1/metrics\": dial tcp 127.0.0.1:4318: connect: connection refused"}
+```
+```json
+{"error": "failed to upload traces: Post \"https://localhost:4318/v1/metrics\": dial tcp 127.0.0.1:4318: connect: connection refused"}
+```
+
+To fix that, configure exporters accordingly. For example, this will disable both metrics and traces exporters:
+
+```bash
+export OTEL_TRACES_EXPORTER=none
+export OTEL_METRICS_EXPORTER=none
+```
+
 ### Routes for pprof
 
 List of enabled pprof routes
