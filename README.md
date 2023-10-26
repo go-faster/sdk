@@ -63,14 +63,22 @@ If that is not true, following errors can be seen in the logs:
 {"error": "failed to upload metrics: Post \"https://localhost:4318/v1/metrics\": dial tcp 127.0.0.1:4318: connect: connection refused"}
 ```
 ```json
-{"error": "failed to upload traces: Post \"https://localhost:4318/v1/metrics\": dial tcp 127.0.0.1:4318: connect: connection refused"}
+{"error": "failed to upload traces: Post \"https://localhost:4318/v1/traces\": dial tcp 127.0.0.1:4318: connect: connection refused"}
 ```
 
 To fix that, configure exporters accordingly. For example, this will disable both metrics and traces exporters:
 
 ```bash
-export OTEL_TRACES_EXPORTER=none
-export OTEL_METRICS_EXPORTER=none
+export OTEL_TRACES_EXPORTER="none"
+export OTEL_METRICS_EXPORTER="none"
+```
+
+To enable Prometheus exporter, set `OTEL_METRICS_EXPORTER=prometheus` and `OTEL_EXPORTER_PROMETHEUS_HOST` and `OTEL_EXPORTER_PROMETHEUS_PORT` accordingly.
+
+```bash
+export OTEL_METRICS_EXPORTER="prometheus"
+export OTEL_EXPORTER_PROMETHEUS_HOST="0.0.0.0"
+export OTEL_EXPORTER_PROMETHEUS_PORT="9090"
 ```
 
 ### Routes for pprof
