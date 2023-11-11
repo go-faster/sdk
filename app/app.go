@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/go-faster/errors"
+	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
@@ -65,6 +67,26 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	m, err := newMetrics(ctx, lg.Named("metrics"), opts.meterOptions, opts.tracerOptions)
 	if err != nil {
 		panic(err)
+	}
+
+	{
+		// Automatically setting GOMAXPROCS.
+		set := true // enabled by default
+		if v, err := strconv.ParseBool(os.Getenv("AUTOMAXPROCS")); err == nil {
+			set = v
+		}
+		minProcs := 1
+		if v, err := strconv.Atoi(os.Getenv("AUTOMAXPROCS_MIN")); err == nil {
+			minProcs = v
+		}
+		if set {
+			if _, err := maxprocs.Set(
+				maxprocs.Logger(lg.Sugar().Infof),
+				maxprocs.Min(minProcs),
+			); err != nil {
+				lg.Warn("Failed to set GOMAXPROCS", zap.Error(err))
+			}
+		}
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
