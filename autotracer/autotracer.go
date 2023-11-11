@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const (
@@ -48,7 +49,7 @@ func getEnvOr(name, def string) string {
 	return def
 }
 
-func noop(_ context.Context) error { return nil }
+func nop(_ context.Context) error { return nil }
 
 type ShutdownFunc func(ctx context.Context) error
 
@@ -102,7 +103,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		return ret(exp)
 	case expNone:
-		return trace.NewNoopTracerProvider(), noop, nil
+		return noop.NewTracerProvider(), nop, nil
 	default:
 		return nil, nil, errors.Errorf("unsupported OTEL_TRACES_EXPORTER %q", exporter)
 	}
