@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -133,7 +132,7 @@ func (m *Metrics) MeterProvider() metric.MeterProvider {
 
 func (m *Metrics) TracerProvider() trace.TracerProvider {
 	if m.tracerProvider == nil {
-		return noop.NewTracerProvider()
+		return otel.GetTracerProvider()
 	}
 	return m.tracerProvider
 }
