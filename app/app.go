@@ -36,16 +36,17 @@ const (
 // Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
 // with exitCodeWatchdog.
 func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Option) {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
 	// Apply options.
 	opts := options{
 		cfg: zap.NewProductionConfig(),
+		ctx: context.Background(),
 	}
 	for _, o := range op {
 		o.apply(&opts)
 	}
+
+	ctx, cancel := signal.NotifyContext(opts.ctx, os.Interrupt)
+	defer cancel()
 
 	// Setup logger.
 	if s := os.Getenv("OTEL_LOG_LEVEL"); s != "" {

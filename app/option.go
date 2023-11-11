@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 
 	"github.com/go-faster/sdk/autometer"
@@ -9,6 +11,7 @@ import (
 
 type options struct {
 	cfg zap.Config
+	ctx context.Context
 
 	meterOptions  []autometer.Option
 	tracerOptions []autotracer.Option
@@ -43,5 +46,12 @@ func WithMeterOptions(opts ...autometer.Option) Option {
 func WithTracerOptions(opts ...autotracer.Option) Option {
 	return optionFunc(func(o *options) {
 		o.tracerOptions = opts
+	})
+}
+
+// WithContext sets the base context for the application. Background context is used by default.
+func WithContext(ctx context.Context) Option {
+	return optionFunc(func(o *options) {
+		o.ctx = ctx
 	})
 }

@@ -24,5 +24,8 @@ func main() {
 		// Redirect metrics and traces to /dev/null.
 		app.WithMeterOptions(autometer.WithWriter(io.Discard)),
 		app.WithTracerOptions(autotracer.WithWriter(io.Discard)),
+
+		// Set base context. Background context is used by default.
+		app.WithContext(context.Background()),
 	)
 }
