@@ -18,6 +18,11 @@ WIP SDK from go-faster for instrumentation.
 > [!WARNING]
 > The pprof listener is disabled by default and should be explicitly enabled by `PPROF_ADDR`.
 
+> [!IMPORTANT]  
+> For configuring OpenTelemetry exporters, see [OpenTelemetry exporters][otel-exporter] documentation.
+
+[otel-exporter]: https://opentelemetry.io/docs/specs/otel/protocol/exporter/
+
 Metrics and pprof can be served from same address if needed, set both addresses to the same value.
 
 | Name                                  | Description                     | Example            | Default                |
@@ -37,6 +42,8 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 | `OTEL_TRACES_EXPORTER`                | Traces exporter to use          | `otlp`             | `otlp`                 |
 | `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use     | `http`             | `grpc`                 |
 
+
+
 ### Metrics exporters
 
 | Value        | Description                 |
@@ -51,6 +58,7 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 |--------|-----------------------------|
 | `otlp` | **OTLP exporter (default)** |
 | `none` | No exporter                 |
+
 
 
 ### Defaults
