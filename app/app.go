@@ -91,8 +91,18 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
+	g.Go(func() (rerr error) {
 		defer lg.Info("Shutting down")
+		defer func() {
+			// Recovering panic to allow telemetry to flush.
+			if ec := recover(); ec != nil {
+				lg.Error("Panic",
+					zap.String("panic", fmt.Sprintf("%v", ec)),
+					zap.StackSkip("stack", 1),
+				)
+				rerr = fmt.Errorf("shutting down (panic): %v", ec)
+			}
+		}()
 		if err := f(ctx, lg, m); err != nil {
 			if errors.Is(err, ctx.Err()) {
 				// Parent context got cancelled, error is expected.
@@ -130,15 +140,6 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 
 		lg.Warn("Graceful shutdown watchdog triggered: forcing shutdown")
 		os.Exit(exitCodeWatchdog)
-	}()
-
-	defer func() {
-		if ec := recover(); ec != nil {
-			lg.Error("Panic",
-				zap.String("panic", fmt.Sprintf("%v", ec)),
-			)
-			os.Exit(exitCodeApplicationErr)
-		}
 	}()
 
 	if err := g.Wait(); err != nil {
