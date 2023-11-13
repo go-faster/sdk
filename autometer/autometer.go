@@ -118,13 +118,13 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		}
 		switch proto {
 		case protoHTTP:
-			exp, err := otlpmetricgrpc.New(ctx)
+			exp, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed to build grpc trace exporter")
 			}
 			return ret(sdkmetric.NewPeriodicReader(exp))
 		case protoGRPC:
-			exp, err := otlpmetrichttp.New(ctx)
+			exp, err := otlpmetricgrpc.New(ctx)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed to build http trace exporter")
 			}
