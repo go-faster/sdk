@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.20.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.42.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.43.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.19.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.20.0
 	go.opentelemetry.io/otel/metric v1.20.0
 	go.opentelemetry.io/otel/sdk v1.20.0
 	go.opentelemetry.io/otel/sdk/metric v1.20.0
