@@ -20,6 +20,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
+
+	"github.com/go-faster/sdk/zctx"
 )
 
 const (
@@ -72,6 +75,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 	err error,
 ) {
 	cfg := newConfig(options)
+	lg := zctx.From(ctx)
 	var metricOptions []sdkmetric.Option
 	if cfg.res != nil {
 		metricOptions = append(metricOptions, sdkmetric.WithResource(cfg.res))
@@ -85,6 +89,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 	// Metrics exporter.
 	switch exporter := strings.TrimSpace(getEnvOr("OTEL_METRICS_EXPORTER", expOTLP)); exporter {
 	case expPrometheus:
+		lg.Debug("Using Prometheus metrics exporter")
 		reg := cfg.prom
 		if reg == nil {
 			reg = promClient.NewPedanticRegistry()
@@ -116,6 +121,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		if proto == "" {
 			proto = defaultProto
 		}
+		lg.Debug("Using OTLP metrics exporter", zap.String("protocol", proto))
 		switch proto {
 		case protoHTTP:
 			exp, err := otlpmetrichttp.New(ctx)
@@ -133,6 +139,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 			return nil, nil, fmt.Errorf("unsupported metric otlp protocol %q", proto)
 		}
 	case writerStdout, writerStderr:
+		lg.Debug("Using stdout metrics exporter", zap.String("writer", exporter))
 		writer := cfg.writer
 		if writer == nil {
 			writer = writerByName(exporter)
@@ -144,6 +151,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		}
 		return ret(sdkmetric.NewPeriodicReader(exp))
 	case expNone:
+		lg.Debug("Using no-op metrics exporter")
 		return noop.NewMeterProvider(), noopHandler, nil
 	default:
 		return nil, nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)

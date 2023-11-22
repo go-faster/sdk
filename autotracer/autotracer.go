@@ -15,6 +15,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+	"go.uber.org/zap"
+
+	"github.com/go-faster/sdk/zctx"
 )
 
 const (
@@ -59,6 +62,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 	err error,
 ) {
 	cfg := newConfig(options)
+	lg := zctx.From(ctx)
 	var traceOptions []sdktrace.TracerProviderOption
 	if cfg.res != nil {
 		traceOptions = append(traceOptions, sdktrace.WithResource(cfg.res))
@@ -76,6 +80,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		if proto == "" {
 			proto = defaultProto
 		}
+		lg.Debug("Using OTLP trace exporter", zap.String("protocol", proto))
 		switch proto {
 		case protoGRPC:
 			exp, err := otlptracegrpc.New(ctx)
@@ -93,6 +98,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 			return nil, nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
 		}
 	case writerStdout, writerStderr:
+		lg.Debug("Using stdout trace exporter", zap.String("writer", exporter))
 		writer := cfg.writer
 		if writer == nil {
 			writer = writerByName(exporter)
@@ -103,6 +109,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		return ret(exp)
 	case expNone:
+		lg.Debug("Using no-op trace exporter")
 		return noop.NewTracerProvider(), nop, nil
 	default:
 		return nil, nil, errors.Errorf("unsupported OTEL_TRACES_EXPORTER %q", exporter)
