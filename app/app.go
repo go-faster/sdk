@@ -38,8 +38,8 @@ const (
 func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		cfg: zap.NewProductionConfig(),
-		ctx: context.Background(),
+		zapConfig: zap.NewProductionConfig(),
+		ctx:       context.Background(),
 	}
 	for _, o := range op {
 		o.apply(&opts)
@@ -54,9 +54,9 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 		if err := lvl.UnmarshalText([]byte(s)); err != nil {
 			panic(err)
 		}
-		opts.cfg.Level.SetLevel(lvl)
+		opts.zapConfig.Level.SetLevel(lvl)
 	}
-	lg, err := opts.cfg.Build()
+	lg, err := opts.zapConfig.Build(opts.zapOptions...)
 	if err != nil {
 		panic(err)
 	}

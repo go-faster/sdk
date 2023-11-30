@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/go-faster/sdk/app"
 	"github.com/go-faster/sdk/autometer"
@@ -20,6 +21,13 @@ func main() {
 	},
 		// Configure custom zap config.
 		app.WithZapConfig(zap.NewDevelopmentConfig()),
+		app.WithZapOptions(
+			// Custom zap logger options.
+			// E.g. hooks, custom core.
+			zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+				return zapcore.NewTee(core)
+			}),
+		),
 
 		// Redirect metrics and traces to /dev/null.
 		app.WithMeterOptions(autometer.WithWriter(io.Discard)),

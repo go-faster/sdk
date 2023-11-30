@@ -10,8 +10,9 @@ import (
 )
 
 type options struct {
-	cfg zap.Config
-	ctx context.Context
+	zapConfig  zap.Config
+	zapOptions []zap.Option
+	ctx        context.Context
 
 	meterOptions  []autometer.Option
 	tracerOptions []autotracer.Option
@@ -31,7 +32,14 @@ type Option interface {
 // WithZapConfig sets the default zap config for the application.
 func WithZapConfig(cfg zap.Config) Option {
 	return optionFunc(func(o *options) {
-		o.cfg = cfg
+		o.zapConfig = cfg
+	})
+}
+
+// WithZapOptions sets additional zap logger options for the application.
+func WithZapOptions(opts ...zap.Option) Option {
+	return optionFunc(func(o *options) {
+		o.zapOptions = opts
 	})
 }
 
