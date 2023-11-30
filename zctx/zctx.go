@@ -103,7 +103,7 @@ func With(ctx context.Context, fields ...zap.Field) context.Context {
 	return with(ctx, v)
 }
 
-// Base initializes root logger for using as base context. Should be done and early.
+// Base initializes root logger for using as a base context. Should be done early.
 //
 // The span and trace IDs must not be added to the base logger because zap
 // can't update or replace fields.
