@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 
 	"github.com/go-faster/sdk/autometer"
@@ -16,6 +17,7 @@ type options struct {
 
 	meterOptions  []autometer.Option
 	tracerOptions []autotracer.Option
+	resourceFn    func(ctx context.Context) (*resource.Resource, error)
 }
 
 type optionFunc func(*options)
@@ -61,5 +63,14 @@ func WithTracerOptions(opts ...autotracer.Option) Option {
 func WithContext(ctx context.Context) Option {
 	return optionFunc(func(o *options) {
 		o.ctx = ctx
+	})
+}
+
+// WithResource sets the function that will be called to retrieve telemetry resource for application.
+//
+// Defaults to [Resource] function.
+func WithResource(fn func(ctx context.Context) (*resource.Resource, error)) Option {
+	return optionFunc(func(o *options) {
+		o.resourceFn = fn
 	})
 }

@@ -8,12 +8,17 @@ import (
 )
 
 // Resource returns new resource for application.
+//
+// Combines following detectors:
+// - ProcessRuntimeDescription
+// - ProcessRuntimeVersion
+// - ProcessRuntimeName
+// And merges it with default resource.
 func Resource(ctx context.Context) (*resource.Resource, error) {
 	opts := []resource.Option{
 		resource.WithProcessRuntimeDescription(),
 		resource.WithProcessRuntimeVersion(),
 		resource.WithProcessRuntimeName(),
-		resource.WithTelemetrySDK(),
 	}
 	r, err := resource.New(ctx, opts...)
 	if err != nil {

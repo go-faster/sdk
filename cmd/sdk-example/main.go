@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -35,5 +36,10 @@ func main() {
 
 		// Set base context. Background context is used by default.
 		app.WithContext(context.Background()),
+
+		// Allows to set custom resource.
+		app.WithResource(func(ctx context.Context) (*resource.Resource, error) {
+			return resource.Default(), nil
+		}),
 	)
 }

@@ -38,8 +38,9 @@ const (
 func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: zap.NewProductionConfig(),
-		ctx:       context.Background(),
+		zapConfig:  zap.NewProductionConfig(),
+		ctx:        context.Background(),
+		resourceFn: Resource,
 	}
 	for _, o := range op {
 		o.apply(&opts)
@@ -65,7 +66,11 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	ctx = zctx.Base(ctx, lg)
 
 	lg.Info("Starting")
-	m, err := newMetrics(ctx, lg.Named("metrics"), opts.meterOptions, opts.tracerOptions)
+	res, err := opts.resourceFn(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("failed to get resource: %v", err))
+	}
+	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions)
 	if err != nil {
 		panic(err)
 	}

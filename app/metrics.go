@@ -164,6 +164,7 @@ func (z zapErrorHandler) Handle(err error) {
 func newMetrics(
 	ctx context.Context,
 	lg *zap.Logger,
+	res *resource.Resource,
 	meterOptions []autometer.Option,
 	tracerOptions []autotracer.Option,
 ) (*Metrics, error) {
@@ -172,10 +173,6 @@ func newMetrics(
 		logger := lg.Named("otel")
 		otel.SetLogger(zapr.NewLogger(logger))
 		otel.SetErrorHandler(zapErrorHandler{lg: logger})
-	}
-	res, err := Resource(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "resource")
 	}
 	m := &Metrics{
 		lg:       lg,
