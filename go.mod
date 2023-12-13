@@ -3,7 +3,7 @@ module github.com/go-faster/sdk
 go 1.20
 
 require (
-	github.com/go-faster/errors v0.7.0
+	github.com/go-faster/errors v0.7.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
