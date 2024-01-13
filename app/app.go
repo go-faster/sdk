@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/zctx"
 )
 
@@ -69,6 +70,9 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	res, err := opts.resourceFn(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get resource: %v", err))
+	}
+	if ctx, err = autologs.Setup(ctx, res); err != nil {
+		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
 	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions)
 	if err != nil {
