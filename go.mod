@@ -1,6 +1,6 @@
 module github.com/go-faster/sdk
 
-go 1.21
+go 1.21.0
 
 require (
 	github.com/go-faster/errors v0.7.1
