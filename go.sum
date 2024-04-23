@@ -56,8 +56,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-go.opentelemetry.io/collector/pdata v1.5.0 h1:1fKTmUpr0xCOhP/B0VEvtz7bYPQ45luQ8XFyA07j8LE=
-go.opentelemetry.io/collector/pdata v1.5.0/go.mod h1:TYj8aKRWZyT/KuKQXKyqSEvK/GV+slFaDMEI+Ke64Yw=
+go.opentelemetry.io/collector/pdata v1.6.0 h1:ZIByleLu7ZfHkfPuL8xIMb9M4Gv1R6568LAjhNOO9zY=
+go.opentelemetry.io/collector/pdata v1.6.0/go.mod h1:pQv6AJO6wDUDxrPxhNaj3JdSzaOIo5glTGL1b4h4KTg=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.50.0 h1:6dck47miguAOny5MeqX1G8idd+HpzDFt86U33d7aW2I=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.50.0/go.mod h1:rdPhRwNd2sHiRmwJAGs8xcwitqmP/j8pvl9X5jloYjU=
 go.opentelemetry.io/contrib/propagators/autoprop v0.50.0 h1:tK1hZrY9rV784YPGAUACvqBjvFCim2rrJZR/09giyrA=
