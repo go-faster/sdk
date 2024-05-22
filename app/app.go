@@ -71,9 +71,14 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	if err != nil {
 		panic(fmt.Sprintf("failed to get resource: %v", err))
 	}
+
+	// Setup logs.
 	if ctx, err = autologs.Setup(ctx, res); err != nil {
 		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
+	// Update root logger after autologs setup.
+	lg = zctx.From(ctx)
+
 	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions)
 	if err != nil {
 		panic(err)
