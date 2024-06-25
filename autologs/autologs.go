@@ -22,6 +22,7 @@ func Setup(ctx context.Context, res *resource.Resource) (context.Context, error)
 	if os.Getenv("OTEL_LOGS_EXPORTER") != "otlp" {
 		return ctx, nil
 	}
+
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
 	if endpoint == "" {
 		endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -29,13 +30,15 @@ func Setup(ctx context.Context, res *resource.Resource) (context.Context, error)
 	if endpoint == "" {
 		endpoint = "localhost:4317"
 	}
+
 	endpoint = strings.TrimPrefix(endpoint, "http://")
-	conn, err := grpc.DialContext(ctx, endpoint,
+	conn, err := grpc.NewClient(endpoint,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return ctx, errors.Wrap(err, "dial logs endpoint")
+		return ctx, errors.Wrap(err, "create grpc client")
 	}
+
 	lg := zctx.From(ctx)
 	otelCore := zapotel.New(lg.Level(), res, plogotlp.NewGRPCClient(conn))
 	// Update logger down the stack.
