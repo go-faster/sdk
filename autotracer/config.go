@@ -1,15 +1,18 @@
 package autotracer
 
 import (
+	"context"
 	"io"
 
 	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res    *resource.Resource
 	writer io.Writer
+	lookup LookupExporter
 }
 
 // newConfig returns a config configured with options.
@@ -51,6 +54,17 @@ func WithResource(res *resource.Resource) Option {
 func WithWriter(out io.Writer) Option {
 	return optionFunc(func(conf config) config {
 		conf.writer = out
+		return conf
+	})
+}
+
+// LookupExporter creates exporter by name.
+type LookupExporter func(ctx context.Context, name string) (sdktrace.SpanExporter, bool, error)
+
+// WithLookupExporter sets exporter lookup function.
+func WithLookupExporter(lookup LookupExporter) Option {
+	return optionFunc(func(conf config) config {
+		conf.lookup = lookup
 		return conf
 	})
 }

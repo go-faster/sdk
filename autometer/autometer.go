@@ -60,11 +60,6 @@ func getEnvOr(name, def string) string {
 
 func noopHandler(_ context.Context) error { return nil }
 
-type stoppableReader interface {
-	sdkmetric.Reader
-	Shutdown(ctx context.Context) error
-}
-
 // ShutdownFunc is a function that shuts down the MeterProvider.
 type ShutdownFunc func(ctx context.Context) error
 
@@ -81,13 +76,14 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		metricOptions = append(metricOptions, sdkmetric.WithResource(cfg.res))
 	}
 
-	ret := func(r stoppableReader) (metric.MeterProvider, func(ctx context.Context) error, error) {
+	ret := func(r sdkmetric.Reader) (metric.MeterProvider, func(ctx context.Context) error, error) {
 		metricOptions = append(metricOptions, sdkmetric.WithReader(r))
 		return sdkmetric.NewMeterProvider(metricOptions...), r.Shutdown, nil
 	}
 
 	// Metrics exporter.
-	switch exporter := strings.TrimSpace(getEnvOr("OTEL_METRICS_EXPORTER", expOTLP)); exporter {
+	exporter := strings.TrimSpace(getEnvOr("OTEL_METRICS_EXPORTER", expOTLP))
+	switch exporter {
 	case expPrometheus:
 		lg.Debug("Using Prometheus metrics exporter")
 		reg := cfg.prom
@@ -154,6 +150,21 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Using no-op metrics exporter")
 		return noop.NewMeterProvider(), noopHandler, nil
 	default:
-		return nil, nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)
+		lookup := cfg.lookup
+		if lookup == nil {
+			break
+		}
+		lg.Debug("Looking for metrics exporter", zap.String("exporter", exporter))
+		exp, ok, err := lookup(ctx, exporter)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, exporter)
+		}
+		if !ok {
+			break
+		}
+
+		lg.Debug("Using user-defined metrics exporter", zap.String("exporter", exporter))
+		return ret(exp)
 	}
+	return nil, nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)
 }
