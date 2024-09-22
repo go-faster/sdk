@@ -1,9 +1,11 @@
 package autometer
 
 import (
+	"context"
 	"io"
 
 	"github.com/prometheus/client_golang/prometheus"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -11,6 +13,7 @@ import (
 type config struct {
 	res    *resource.Resource
 	writer io.Writer
+	lookup LookupExporter
 
 	prom         prometheus.Registerer
 	promCallback func(reg *prometheus.Registry)
@@ -69,6 +72,17 @@ func WithOnPrometheusRegistry(f func(reg *prometheus.Registry)) Option {
 func WithWriter(out io.Writer) Option {
 	return optionFunc(func(conf config) config {
 		conf.writer = out
+		return conf
+	})
+}
+
+// LookupExporter creates exporter by name.
+type LookupExporter func(ctx context.Context, name string) (sdkmetric.Reader, bool, error)
+
+// WithLookupExporter sets exporter lookup function.
+func WithLookupExporter(lookup LookupExporter) Option {
+	return optionFunc(func(conf config) config {
+		conf.lookup = lookup
 		return conf
 	})
 }
