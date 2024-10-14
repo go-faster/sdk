@@ -108,7 +108,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		exp, err := stdouttrace.New(stdouttrace.WithWriter(writer))
 		if err != nil {
-			return nil, nil, errors.Wrap(err, exporter)
+			return nil, nil, errors.Wrapf(err, "create %q trace exporter", exporter)
 		}
 		return ret(exp)
 	case expNone:

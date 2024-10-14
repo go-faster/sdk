@@ -142,7 +142,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		enc := json.NewEncoder(writer)
 		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, exporter)
+			return nil, nil, errors.Wrapf(err, "create %q metric exporter", exporter)
 		}
 		return ret(sdkmetric.NewPeriodicReader(exp))
 	case expNone:
