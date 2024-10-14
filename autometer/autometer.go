@@ -5,17 +5,16 @@ package autometer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/go-faster/errors"
-	promClient "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	otelprometheus "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -88,19 +87,19 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Using Prometheus metrics exporter")
 		reg := cfg.prom
 		if reg == nil {
-			reg = promClient.NewPedanticRegistry()
+			reg = prometheus.NewPedanticRegistry()
 		}
 		if cfg.promCallback != nil {
 			switch v := reg.(type) {
-			case *promClient.Registry:
+			case *prometheus.Registry:
 				cfg.promCallback(v)
 			}
 		}
-		exp, err := prometheus.New(
-			prometheus.WithRegisterer(reg),
+		exp, err := otelprometheus.New(
+			otelprometheus.WithRegisterer(reg),
 		)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "prometheus")
+			return nil, nil, errors.Wrap(err, "create Prometheus exporter")
 		}
 		// Register legacy prometheus-only runtime metrics for backward compatibility.
 		reg.MustRegister(
@@ -122,17 +121,17 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		case protoHTTP:
 			exp, err := otlpmetrichttp.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed to build grpc trace exporter")
+				return nil, nil, errors.Wrap(err, "create OTLP HTTP metric exporter")
 			}
 			return ret(sdkmetric.NewPeriodicReader(exp))
 		case protoGRPC:
 			exp, err := otlpmetricgrpc.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed to build http trace exporter")
+				return nil, nil, errors.Wrap(err, "create OTLP gRPC metric exporter")
 			}
 			return ret(sdkmetric.NewPeriodicReader(exp))
 		default:
-			return nil, nil, fmt.Errorf("unsupported metric otlp protocol %q", proto)
+			return nil, nil, errors.Errorf("unsupported metric OTLP protocol %q", proto)
 		}
 	case writerStdout, writerStderr:
 		lg.Debug("Using stdout metrics exporter", zap.String("writer", exporter))
@@ -143,7 +142,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		enc := json.NewEncoder(writer)
 		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
 		if err != nil {
-			return nil, nil, errors.Wrap(err, exporter)
+			return nil, nil, errors.Wrapf(err, exporter)
 		}
 		return ret(sdkmetric.NewPeriodicReader(exp))
 	case expNone:
@@ -157,7 +156,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Looking for metrics exporter", zap.String("exporter", exporter))
 		exp, ok, err := lookup(ctx, exporter)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, exporter)
+			return nil, nil, errors.Wrapf(err, "create %q", exporter)
 		}
 		if !ok {
 			break
