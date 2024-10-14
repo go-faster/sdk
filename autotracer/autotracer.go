@@ -84,18 +84,19 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		lg.Debug("Using OTLP trace exporter", zap.String("protocol", proto))
 		switch proto {
-		case protoGRPC:
-			exp, err := otlptracegrpc.New(ctx)
-			if err != nil {
-				return nil, nil, errors.Errorf("failed to create trace exporter: %w", err)
-			}
-			return ret(exp)
 		case protoHTTP:
 			exp, err := otlptracehttp.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Errorf("failed to create trace exporter: %w", err)
+				return nil, nil, errors.Wrap(err, "create OTLP HTTP trace exporter")
 			}
 			return ret(exp)
+		case protoGRPC:
+			exp, err := otlptracegrpc.New(ctx)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "create OTLP gRPC trace exporter")
+			}
+			return ret(exp)
+
 		default:
 			return nil, nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
 		}
@@ -121,7 +122,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Looking for traces exporter", zap.String("exporter", exporter))
 		exp, ok, err := lookup(ctx, exporter)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, exporter)
+			return nil, nil, errors.Wrapf(err, "create %q", exporter)
 		}
 		if !ok {
 			break
