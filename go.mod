@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-logr/zapr v1.3.0
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/collector/pdata v1.17.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.56.0
