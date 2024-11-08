@@ -1,6 +1,7 @@
 module github.com/go-faster/sdk
 
 go 1.22.0
+toolchain go1.22.9
 
 require (
 	github.com/go-faster/errors v0.7.1
@@ -25,7 +26,7 @@ require (
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.9.0
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 )
 
 require (
