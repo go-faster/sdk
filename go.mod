@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/collector/pdata v1.19.0
+	go.opentelemetry.io/collector/pdata v1.20.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.57.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.57.0
 	go.opentelemetry.io/otel v1.32.0
