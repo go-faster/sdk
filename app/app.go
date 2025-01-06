@@ -79,7 +79,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	// Update root logger after autologs setup.
 	lg = zctx.From(ctx)
 
-	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions)
+	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions, opts.loggerOptions)
 	if err != nil {
 		panic(err)
 	}

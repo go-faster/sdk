@@ -6,6 +6,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 
+	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autotracer"
 )
@@ -17,6 +18,7 @@ type options struct {
 
 	meterOptions  []autometer.Option
 	tracerOptions []autotracer.Option
+	loggerOptions []autologs.Option
 	resourceFn    func(ctx context.Context) (*resource.Resource, error)
 }
 
