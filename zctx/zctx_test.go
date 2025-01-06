@@ -69,8 +69,17 @@ func assertEntries(t testing.TB, logs *observer.ObservedLogs, want ...observer.L
 				}
 				af, hf := v, haveFields[k]
 				assert.Equalf(t, af.Key, hf.Key, "[%d][%s]: Unexpected context key.", i, k)
-				assert.Equalf(t, af.Type, hf.Type, "[%d][%s]: Unexpected context type.", i, k)
-				assert.Equalf(t, af.Interface, hf.Interface, "[%d][%s]: Unexpected context value.", i, k)
+				if aCtx, aOk := af.Interface.(SpanCompare); aOk {
+					hCtx, hOk := hf.Interface.(context.Context)
+					assert.Truef(t, hOk, "[%d][%s]: Unexpected context value.", i, k)
+					hS := trace.SpanContextFromContext(hCtx)
+					assert.Truef(t, aCtx.Equal(hS), "[%d][%s]: Unexpected span context. (%s != %s-%s)",
+						i, k, aCtx, hS.TraceID(), hS.SpanID(),
+					)
+				} else {
+					assert.Equalf(t, af.Type, hf.Type, "[%d][%s]: Unexpected context type.", i, k)
+					assert.Equalf(t, af.Interface, hf.Interface, "[%d][%s]: Unexpected context value.", i, k)
+				}
 				assert.Equalf(t, af.String, hf.String, "[%d][%s]: Unexpected context value.", i, k)
 			}
 		}
@@ -174,6 +183,83 @@ func TestFrom(t *testing.T) {
 				zap.String("trace_id", "47058b76ab7d2a10a2ef6534312d205a"),
 				zap.String("span_id", "6f539157d0433b08"),
 				zap.Int("i", 1), zap.Int("j", 2),
+			},
+		},
+	}
+	assertEntries(t, logs, want...)
+}
+
+type SpanCompare struct {
+	TraceID string
+	SpanID  string
+}
+
+type SpanComparator interface {
+	Equal(trace.SpanContext) bool
+}
+
+func newSpanComparator(traceID, spanID string) zap.Field {
+	return zap.Any("ctx", SpanComparator(SpanCompare{
+		TraceID: traceID,
+		SpanID:  spanID,
+	}))
+}
+
+func (c SpanCompare) Equal(sc trace.SpanContext) bool {
+	if c.TraceID != sc.TraceID().String() {
+		return false
+	}
+	if c.SpanID != sc.SpanID().String() {
+		return false
+	}
+	return true
+}
+
+func TestOpenTelemetyZap(t *testing.T) {
+	obs, logs := observer.New(zap.DebugLevel)
+	assertEmpty(t, logs)
+
+	assert.NoError(t, obs.Sync(), "Unexpected failure in no-op Sync")
+
+	lg := zap.New(obs).With(zap.Int("i", 1))
+
+	ctx := Base(context.Background(), lg)
+	ctx = WithOpenTelemetryZap(ctx)
+	ctx = With(ctx, zap.Int("j", 2))
+
+	tracer := newTestTracer()
+	do(ctx, tracer, 3)
+	want := []observer.LoggedEntry{
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 3),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "aa1a08609e5aacf2"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 2),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "572a3c21b660fc50"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 1),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "07b95cb1be0ea6cd"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 4),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "6f539157d0433b08"),
 			},
 		},
 	}
