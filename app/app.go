@@ -31,12 +31,19 @@ const (
 	watchdogTimeout = shutdownTimeout + time.Second*5
 )
 
+// Go runs f until interrupt.
+func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
+	Run(func(ctx context.Context, _ *zap.Logger, t *Telemetry) error {
+		return f(ctx, t)
+	}, op...)
+}
+
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
 // Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
 // with exitCodeWatchdog.
-func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Option) {
+func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
 		zapConfig:  zap.NewProductionConfig(),
@@ -77,7 +84,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 		panic(fmt.Sprintf("failed to get resource: %v", err))
 	}
 
-	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions, opts.loggerOptions)
+	m, err := newTelemetry(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions, opts.loggerOptions)
 	if err != nil {
 		panic(err)
 	}

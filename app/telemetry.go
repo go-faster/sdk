@@ -37,8 +37,11 @@ type httpEndpoint struct {
 	addr     string
 }
 
-// Metrics implement common basic metrics and infrastructure to it.
-type Metrics struct {
+// Deprecated: use Telemetry.
+type Metrics = Telemetry
+
+// Telemetry implement common basic metrics and infrastructure to it.
+type Telemetry struct {
 	lg *zap.Logger
 
 	prom *promClient.Registry
@@ -54,7 +57,7 @@ type Metrics struct {
 	shutdowns []shutdown
 }
 
-func (m *Metrics) registerShutdown(name string, fn func(ctx context.Context) error) {
+func (m *Telemetry) registerShutdown(name string, fn func(ctx context.Context) error) {
 	m.shutdowns = append(m.shutdowns, shutdown{name: name, fn: fn})
 }
 
@@ -63,11 +66,11 @@ type shutdown struct {
 	fn   func(ctx context.Context) error
 }
 
-func (m *Metrics) String() string {
+func (m *Telemetry) String() string {
 	return "metrics"
 }
 
-func (m *Metrics) run(ctx context.Context) error {
+func (m *Telemetry) run(ctx context.Context) error {
 	defer m.lg.Debug("Stopped metrics")
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -101,7 +104,7 @@ func (m *Metrics) run(ctx context.Context) error {
 	return wg.Wait()
 }
 
-func (m *Metrics) shutdown(ctx context.Context) {
+func (m *Telemetry) shutdown(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	// Launch shutdowns in parallel.
@@ -127,28 +130,28 @@ func (m *Metrics) shutdown(ctx context.Context) {
 	wg.Wait()
 }
 
-func (m *Metrics) MeterProvider() metric.MeterProvider {
+func (m *Telemetry) MeterProvider() metric.MeterProvider {
 	if m.meterProvider == nil {
 		return otel.GetMeterProvider()
 	}
 	return m.meterProvider
 }
 
-func (m *Metrics) TracerProvider() trace.TracerProvider {
+func (m *Telemetry) TracerProvider() trace.TracerProvider {
 	if m.tracerProvider == nil {
 		return otel.GetTracerProvider()
 	}
 	return m.tracerProvider
 }
 
-func (m *Metrics) LoggerProvider() log.LoggerProvider {
+func (m *Telemetry) LoggerProvider() log.LoggerProvider {
 	if m.loggerProvider == nil {
 		return noop.NewLoggerProvider()
 	}
 	return m.loggerProvider
 }
 
-func (m *Metrics) TextMapPropagator() propagation.TextMapPropagator {
+func (m *Telemetry) TextMapPropagator() propagation.TextMapPropagator {
 	return m.propagator
 }
 
@@ -172,21 +175,21 @@ func (z zapErrorHandler) Handle(err error) {
 	z.lg.Error("Error", zap.Error(err))
 }
 
-func newMetrics(
+func newTelemetry(
 	ctx context.Context,
 	lg *zap.Logger,
 	res *resource.Resource,
 	meterOptions []autometer.Option,
 	tracerOptions []autotracer.Option,
 	logsOptions []autologs.Option,
-) (*Metrics, error) {
+) (*Telemetry, error) {
 	{
 		// Setup global OTEL logger and error handler.
 		logger := lg.Named("otel")
 		otel.SetLogger(zapr.NewLogger(logger))
 		otel.SetErrorHandler(zapErrorHandler{lg: logger})
 	}
-	m := &Metrics{
+	m := &Telemetry{
 		lg:       lg,
 		resource: res,
 	}

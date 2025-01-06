@@ -10,7 +10,7 @@ import (
 	"github.com/go-faster/sdk/profiler"
 )
 
-func (m *Metrics) registerProfiler(mux *http.ServeMux) {
+func (m *Telemetry) registerProfiler(mux *http.ServeMux) {
 	var routes []string
 	if v := os.Getenv("PPROF_ROUTES"); v != "" {
 		routes = strings.Split(v, ",")
