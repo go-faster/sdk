@@ -21,6 +21,7 @@ func main() {
 		return nil
 	},
 		// Configure custom zap config.
+		app.WithZapTee(false),
 		app.WithZapConfig(zap.NewDevelopmentConfig()),
 		app.WithZapOptions(
 			// Custom zap logger options.

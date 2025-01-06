@@ -40,8 +40,13 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 	// Apply options.
 	opts := options{
 		zapConfig:  zap.NewProductionConfig(),
+		zapTee:     true,
 		ctx:        context.Background(),
 		resourceFn: Resource,
+	}
+	if v, err := strconv.ParseBool(os.Getenv("OTEL_ZAP_TEE")); err == nil {
+		// Override default.
+		opts.zapTee = v
 	}
 	for _, o := range op {
 		o.apply(&opts)
@@ -72,16 +77,14 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 		panic(fmt.Sprintf("failed to get resource: %v", err))
 	}
 
-	// Setup logs.
-	if ctx, err = autologs.Setup(ctx, res); err != nil {
-		panic(fmt.Sprintf("failed to setup logs: %v", err))
-	}
-	// Update root logger after autologs setup.
-	lg = zctx.From(ctx)
-
 	m, err := newMetrics(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions, opts.loggerOptions)
 	if err != nil {
 		panic(err)
+	}
+
+	// Setup logs.
+	if ctx, err = autologs.Setup(ctx, m.LoggerProvider(), opts.zapTee); err != nil {
+		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
 
 	{
@@ -117,7 +120,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Metrics) error, op ...Op
 				rerr = fmt.Errorf("shutting down (panic): %v", ec)
 			}
 		}()
-		if err := f(ctx, lg, m); err != nil {
+		if err := f(ctx, zctx.From(ctx), m); err != nil {
 			if errors.Is(err, ctx.Err()) {
 				// Parent context got cancelled, error is expected.
 				lg.Debug("Graceful shutdown")

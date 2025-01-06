@@ -1,4 +1,6 @@
 // Package zapotel provides OpenTelemetry logs exporter zap core implementation.
+//
+// Deprecated. Use go.opentelemetry.io/contrib/bridges/otelzap.
 package zapotel
 
 import (

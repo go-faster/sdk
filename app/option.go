@@ -14,6 +14,7 @@ import (
 type options struct {
 	zapConfig  zap.Config
 	zapOptions []zap.Option
+	zapTee     bool
 	ctx        context.Context
 
 	meterOptions  []autometer.Option
@@ -31,6 +32,13 @@ func (f optionFunc) apply(o *options) {
 // Option is a functional option for the application.
 type Option interface {
 	apply(o *options)
+}
+
+// WithZapTee sets option to tee zap logs to stderr.
+func WithZapTee(teeToStderr bool) Option {
+	return optionFunc(func(o *options) {
+		o.zapTee = teeToStderr
+	})
 }
 
 // WithZapConfig sets the default zap config for the application.

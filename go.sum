@@ -70,6 +70,8 @@ go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJyS
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/collector/pdata v1.22.0 h1:3yhjL46NLdTMoP8rkkcE9B0pzjf2973crn0KKhX5UrI=
 go.opentelemetry.io/collector/pdata v1.22.0/go.mod h1:nLLf6uDg8Kn5g3WNZwGyu8+kf77SwOqQvMTb5AXEbEY=
+go.opentelemetry.io/contrib/bridges/otelzap v0.8.0 h1:4jqXEd0FGULFBy1bF1ledBePc0Ssu8YVddTgr8BXDTc=
+go.opentelemetry.io/contrib/bridges/otelzap v0.8.0/go.mod h1:nrDogEQCtEOQ4jAiN4uHIE0BqicDF9bMyepgK1pIbP4=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.58.0 h1:GrcF8ABgnBHQFgp4zu5/jTSqLkoJ9uiDz2e7eKkjq+w=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.58.0/go.mod h1:+kxR5prZLoFAJVXJWZKWO2e4PY2dYyXIRNklBuOyzpM=
 go.opentelemetry.io/contrib/propagators/autoprop v0.58.0 h1:pL1MMoBcG/ol6fVsjE1bbOO9A8GMQiN+T73hnmaXDoU=
