@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -23,6 +25,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autotracer"
 )
@@ -43,6 +46,7 @@ type Metrics struct {
 
 	tracerProvider trace.TracerProvider
 	meterProvider  metric.MeterProvider
+	loggerProvider log.LoggerProvider
 
 	resource   *resource.Resource
 	propagator propagation.TextMapPropagator
@@ -137,6 +141,13 @@ func (m *Metrics) TracerProvider() trace.TracerProvider {
 	return m.tracerProvider
 }
 
+func (m *Metrics) LoggerProvider() log.LoggerProvider {
+	if m.loggerProvider == nil {
+		return noop.NewLoggerProvider()
+	}
+	return m.loggerProvider
+}
+
 func (m *Metrics) TextMapPropagator() propagation.TextMapPropagator {
 	return m.propagator
 }
@@ -167,6 +178,7 @@ func newMetrics(
 	res *resource.Resource,
 	meterOptions []autometer.Option,
 	tracerOptions []autotracer.Option,
+	logsOptions []autologs.Option,
 ) (*Metrics, error) {
 	{
 		// Setup global OTEL logger and error handler.
@@ -177,6 +189,18 @@ func newMetrics(
 	m := &Metrics{
 		lg:       lg,
 		resource: res,
+	}
+	{
+		provider, stop, err := autologs.NewLoggerProvider(ctx,
+			include(logsOptions,
+				autologs.WithResource(res),
+			)...,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "logger provider")
+		}
+		m.loggerProvider = provider
+		m.registerShutdown("logger", stop)
 	}
 	{
 		provider, stop, err := autotracer.NewTracerProvider(ctx,
