@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	app.Run(func(ctx context.Context, lg *zap.Logger, m *app.Metrics) error {
+	app.Run(func(ctx context.Context, lg *zap.Logger, t *app.Telemetry) error {
 		lg.Info("Hello, world!")
 		<-ctx.Done()
 		lg.Info("Goodbye, world!")
