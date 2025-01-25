@@ -5,14 +5,16 @@ Implements automatic setup of observability and daemonization based on environme
 
 ## Packages
 
-| Package      | Description                                             |
-|--------------|---------------------------------------------------------|
-| `autometer`  | Automatic OpenTelemetry MeterProvider from environment  |
-| `autotracer` | Automatic OpenTelemetry TracerProvider from environment |
-| `profiler`   | Explicit pprof routes                                   |
-| `zctx`       | context.Context and tracing support for zap             |
-| `gold`       | Golden files in tests                                   |
-| `app`        | Automatic setup observability and run daemon            |
+| Package      | Description                                                |
+|--------------|------------------------------------------------------------|
+| `autometer`  | Automatic OpenTelemetry MeterProvider from environment     |
+| `autotracer` | Automatic OpenTelemetry TracerProvider from environment    |
+| `autologs`   | Automatic OpenTelemetry LoggerProvider from environment    |
+| `autopyro`   | Automatic Grafana Pyroscope configuration from environment |
+| `profiler`   | Explicit pprof routes                                      |
+| `zctx`       | context.Context and tracing support for zap                |
+| `gold`       | Golden files in tests                                      |
+| `app`        | Automatic setup observability and run daemon               |
 
 ## Environment variables
 
@@ -26,24 +28,30 @@ Implements automatic setup of observability and daemonization based on environme
 
 Metrics and pprof can be served from same address if needed, set both addresses to the same value.
 
-| Name                                  | Description                      | Example            | Default                |
-|---------------------------------------|----------------------------------|--------------------|------------------------|
-| `AUTOMAXPROCS`                        | Use [automaxprocs][automaxprocs] | `0`                | `1`                    |
-| `AUTOMAXPROCS_MIN`                    | Minimum `GOMAXPROCS` to use      | `2`                | `1`                    |
-| `OTEL_RESOURCE_ATTRIBUTES`            | OTEL Resource attributes         | `service.name=app` |                        |
-| `OTEL_SERVICE_NAME`                   | OTEL Service name                | `app`              | `unknown_service`      |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol to use             | `http`             | `grpc`                 |
-| `OTEL_PROPAGATORS`                    | OTEL Propagators                 | `none`             | `tracecontext,baggage` |
-| `PPROF_ROUTES`                        | List of enabled pprof routes     | `cmdline,profile`  | See below              |
-| `PPROF_ADDR`                          | Enable pprof and listen on addr  | `0.0.0.0:9010`     | N/A                    |
-| `OTEL_LOG_LEVEL`                      | Log level                        | `debug`            | `info`                 |
-| `METRICS_ADDR`                        | Prometheus addr (fallback)       | `localhost:9464`   | Prometheus addr        |
-| `OTEL_METRICS_EXPORTER`               | Metrics exporter to use          | `prometheus`       | `otlp`                 |
-| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use     | `http`             | `grpc`                 |
-| `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr          | `0.0.0.0`          | `localhost`            |
-| `OTEL_EXPORTER_PROMETHEUS_PORT`       | Port of prometheus addr          | `9090`             | `9464`                 |
-| `OTEL_TRACES_EXPORTER`                | Traces exporter to use           | `otlp`             | `otlp`                 |
-| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use      | `http`             | `grpc`                 |
+| Name                                  | Description                      | Example                 | Default                |
+|---------------------------------------|----------------------------------|-------------------------|------------------------|
+| `AUTOMAXPROCS`                        | Use [automaxprocs][automaxprocs] | `0`                     | `1`                    |
+| `AUTOMAXPROCS_MIN`                    | Minimum `GOMAXPROCS` to use      | `2`                     | `1`                    |
+| `OTEL_RESOURCE_ATTRIBUTES`            | OTEL Resource attributes         | `service.name=app`      |                        |
+| `OTEL_SERVICE_NAME`                   | OTEL Service name                | `app`                   | `unknown_service`      |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol to use             | `http`                  | `grpc`                 |
+| `OTEL_PROPAGATORS`                    | OTEL Propagators                 | `none`                  | `tracecontext,baggage` |
+| `PPROF_ROUTES`                        | List of enabled pprof routes     | `cmdline,profile`       | See below              |
+| `PPROF_ADDR`                          | Enable pprof and listen on addr  | `0.0.0.0:9010`          | N/A                    |
+| `OTEL_LOG_LEVEL`                      | Log level                        | `debug`                 | `info`                 |
+| `METRICS_ADDR`                        | Prometheus addr (fallback)       | `localhost:9464`        | Prometheus addr        |
+| `OTEL_METRICS_EXPORTER`               | Metrics exporter to use          | `prometheus`            | `otlp`                 |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use     | `http`                  | `grpc`                 |
+| `OTEL_EXPORTER_PROMETHEUS_HOST`       | Host of prometheus addr          | `0.0.0.0`               | `localhost`            |
+| `OTEL_EXPORTER_PROMETHEUS_PORT`       | Port of prometheus addr          | `9090`                  | `9464`                 |
+| `OTEL_TRACES_EXPORTER`                | Traces exporter to use           | `otlp`                  | `otlp`                 |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Traces OTLP protocol to use      | `http`                  | `grpc`                 |
+| `PYROSCOPE_ENABLE`                    | Enable Grafana Pyroscope         | `true`                  | `false`                |
+| `PYROSCOPE_APP_NAME`                  | Pyroscope `ApplicationName`      | `app`                   |                        |
+| `PYROSCOPE_URL`                       | Pyroscope `ServerAddress`        | `http://localhost:1234` |                        |
+| `PYROSCOPE_USER`                      | Pyroscope `BasicAuthUser`        | `foo`                   |                        |
+| `PYROSCOPE_PASSWORD`                  | Pyroscope `BasicAuthPassword`    | `bar`                   |                        |
+| `PYROSCOPE_TENANT_ID`                 | Pyroscope `TenantID`             | `foo_bar`               |                        |
 
 [automaxprocs]: https://github.com/uber-go/automaxprocs
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-logr/zapr"
+	otelpyroscope "github.com/grafana/otel-profiling-go"
 	promClient "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
+	"github.com/go-faster/sdk/autopyro"
 	"github.com/go-faster/sdk/autotracer"
 )
 
@@ -242,6 +244,18 @@ func newTelemetry(
 		runtime.WithMinimumReadMemStatsInterval(time.Second), // export as env?
 	); err != nil {
 		return nil, errors.Wrap(err, "runtime metrics")
+	}
+
+	// Setup pyroscope.
+	if autopyro.Enabled() {
+		stop, err := autopyro.Setup(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "pyroscope")
+		}
+		m.registerShutdown("pyroscope", stop)
+		// Setup pyroscope tracing integration.
+		// See https://github.com/grafana/otel-profiling-go
+		m.tracerProvider = otelpyroscope.NewTracerProvider(m.tracerProvider)
 	}
 
 	// Register global OTEL providers.

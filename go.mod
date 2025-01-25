@@ -5,6 +5,8 @@ go 1.22.7
 require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-logr/zapr v1.3.0
+	github.com/grafana/otel-profiling-go v0.5.1
+	github.com/grafana/pyroscope-go v1.2.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/pdata v1.24.0
@@ -43,6 +45,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.25.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
