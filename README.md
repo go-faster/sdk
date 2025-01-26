@@ -15,6 +15,7 @@ Implements automatic setup of observability and daemonization based on environme
 | `zctx`       | context.Context and tracing support for zap                |
 | `gold`       | Golden files in tests                                      |
 | `app`        | Automatic setup observability and run daemon               |
+| `autometric` | Reflect-based OpenTelemetry metric initializer             |
 
 ## Environment variables
 
