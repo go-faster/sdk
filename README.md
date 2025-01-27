@@ -109,13 +109,6 @@ List of enabled pprof routes
 
 **Default**: `profile,symbol,trace,goroutine,heap,threadcreate,block`
 
-
-
-## TODO
-- [ ] Use slog
-- [ ] Pyroscope compat
-
-
 ## Code coverage 
 
 [![codecov](https://codecov.io/gh/go-faster/sdk/branch/main/graphs/sunburst.svg?token=cEE7AZ38Ho)](https://codecov.io/gh/go-faster/sdk)
