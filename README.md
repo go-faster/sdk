@@ -31,7 +31,7 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 
 ### Example
 
-```.dotenv
+```bash
 OTEL_LOG_LEVEL=debug
 OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_INSECURE=true
