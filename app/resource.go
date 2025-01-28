@@ -14,6 +14,8 @@ import (
 // - ProcessRuntimeVersion
 // - ProcessRuntimeName
 // And merges it with default resource.
+//
+// Deprecated: use [WithResourceOptions], [WithServiceName], [WithServiceNamespace].
 func Resource(ctx context.Context) (*resource.Resource, error) {
 	opts := []resource.Option{
 		resource.WithProcessRuntimeDescription(),

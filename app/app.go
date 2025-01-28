@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -46,10 +47,26 @@ func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
 func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig:  zap.NewProductionConfig(),
-		zapTee:     true,
-		ctx:        context.Background(),
-		resourceFn: Resource,
+		zapConfig: zap.NewProductionConfig(),
+		zapTee:    true,
+		ctx:       context.Background(),
+		resourceOptions: []resource.Option{
+			resource.WithProcessRuntimeDescription(),
+			resource.WithProcessRuntimeVersion(),
+			resource.WithProcessRuntimeName(),
+			resource.WithOS(),
+			resource.WithFromEnv(),
+			resource.WithTelemetrySDK(),
+			resource.WithHost(),
+			resource.WithProcess(),
+		},
+	}
+	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
+		r, err := resource.New(ctx, opts.resourceOptions...)
+		if err != nil {
+			return nil, errors.Wrap(err, "new")
+		}
+		return resource.Merge(resource.Default(), r)
 	}
 	if v, err := strconv.ParseBool(os.Getenv("OTEL_ZAP_TEE")); err == nil {
 		// Override default.

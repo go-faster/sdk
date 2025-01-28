@@ -29,6 +29,33 @@ Implements automatic setup of observability and daemonization based on environme
 
 Metrics and pprof can be served from same address if needed, set both addresses to the same value.
 
+### Example
+
+```.dotenv
+OTEL_LOG_LEVEL=debug
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+OTEL_EXPORTER_OTLP_INSECURE=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
+OTEL_RESOURCE_ATTRIBUTES=service.name=go-faster.oteldb
+
+# metrics exporter
+OTEL_METRIC_EXPORT_INTERVAL=10000
+OTEL_METRIC_EXPORT_TIMEOUT=5000
+
+# pyroscope
+PYROSCOPE_URL=http://127.0.0.1:4040
+# should be same as service.name
+PYROSCOPE_APP_NAME=go-faster.oteldb
+PYROSCOPE_ENABLE=true
+
+# use new metrics
+OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false
+# generate instance id
+OTEL_GO_X_RESOURCE=true
+```
+
+### Reference
+
 | Name                                  | Description                      | Example                 | Default                |
 |---------------------------------------|----------------------------------|-------------------------|------------------------|
 | `AUTOMAXPROCS`                        | Use [automaxprocs][automaxprocs] | `0`                     | `1`                    |

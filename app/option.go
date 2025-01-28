@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
 
 	"github.com/go-faster/sdk/autologs"
@@ -17,10 +18,11 @@ type options struct {
 	zapTee     bool
 	ctx        context.Context
 
-	meterOptions  []autometer.Option
-	tracerOptions []autotracer.Option
-	loggerOptions []autologs.Option
-	resourceFn    func(ctx context.Context) (*resource.Resource, error)
+	meterOptions    []autometer.Option
+	tracerOptions   []autotracer.Option
+	loggerOptions   []autologs.Option
+	resourceOptions []resource.Option
+	resourceFn      func(ctx context.Context) (*resource.Resource, error)
 }
 
 type optionFunc func(*options)
@@ -69,6 +71,29 @@ func WithTracerOptions(opts ...autotracer.Option) Option {
 	})
 }
 
+// WithResourceOptions sets the default resource options.
+//
+// Use before [WithResource] or [WithServiceName] to override default resource options.
+func WithResourceOptions(opts ...resource.Option) Option {
+	return optionFunc(func(o *options) {
+		o.resourceOptions = opts
+	})
+}
+
+// WithServiceName sets the default service name for the application.
+func WithServiceName(name string) Option {
+	return optionFunc(func(o *options) {
+		o.resourceOptions = append(o.resourceOptions, resource.WithAttributes(semconv.ServiceName(name)))
+	})
+}
+
+// WithServiceNamespace sets the default service namespace for the application.
+func WithServiceNamespace(namespace string) Option {
+	return optionFunc(func(o *options) {
+		o.resourceOptions = append(o.resourceOptions, resource.WithAttributes(semconv.ServiceNamespace(namespace)))
+	})
+}
+
 // WithContext sets the base context for the application. Background context is used by default.
 func WithContext(ctx context.Context) Option {
 	return optionFunc(func(o *options) {
@@ -78,7 +103,7 @@ func WithContext(ctx context.Context) Option {
 
 // WithResource sets the function that will be called to retrieve telemetry resource for application.
 //
-// Defaults to [Resource] function.
+// Defaults to function that enables most common resource detectors.
 func WithResource(fn func(ctx context.Context) (*resource.Resource, error)) Option {
 	return optionFunc(func(o *options) {
 		o.resourceFn = fn

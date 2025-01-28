@@ -38,7 +38,24 @@ func main() {
 		// Set base context. Background context is used by default.
 		app.WithContext(context.Background()),
 
-		// Allows to set custom resource.
+		// Set default service name and namespace.
+		// Incompatible with [app.WithResource].
+		app.WithServiceName("example"),
+		app.WithServiceNamespace("sdk"),
+
+		// Set default resource options.
+		app.WithResourceOptions(
+			resource.WithProcessRuntimeDescription(),
+			resource.WithProcessRuntimeVersion(),
+			resource.WithProcessRuntimeName(),
+			resource.WithOS(),
+			resource.WithFromEnv(),
+			resource.WithTelemetrySDK(),
+			resource.WithHost(),
+			resource.WithProcess(),
+		),
+
+		// Also allows to set custom resource.
 		app.WithResource(func(ctx context.Context) (*resource.Resource, error) {
 			return resource.Default(), nil
 		}),
