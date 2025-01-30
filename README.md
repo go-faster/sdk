@@ -16,6 +16,7 @@ Implements automatic setup of observability and daemonization based on environme
 | `gold`       | Golden files in tests                                      |
 | `app`        | Automatic setup observability and run daemon               |
 | `autometric` | Reflect-based OpenTelemetry metric initializer             |
+| `otelsync`   | OpenTelemetry synchronous adapter for async metrics        |
 
 ## Environment variables
 
