@@ -32,12 +32,13 @@ Metrics and pprof can be served from same address if needed, set both addresses 
 
 ### Example
 
+#### Environment file
 ```bash
 OTEL_LOG_LEVEL=debug
 OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_INSECURE=true
 OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
-OTEL_RESOURCE_ATTRIBUTES=service.name=go-faster.oteldb
+OTEL_RESOURCE_ATTRIBUTES=service.name=go-faster.simon
 
 # metrics exporter
 OTEL_METRIC_EXPORT_INTERVAL=10000
@@ -46,13 +47,67 @@ OTEL_METRIC_EXPORT_TIMEOUT=5000
 # pyroscope
 PYROSCOPE_URL=http://127.0.0.1:4040
 # should be same as service.name
-PYROSCOPE_APP_NAME=go-faster.oteldb
+PYROSCOPE_APP_NAME=go-faster.simon
 PYROSCOPE_ENABLE=true
 
 # use new metrics
 OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false
 # generate instance id
 OTEL_GO_X_RESOURCE=true
+```
+
+#### Docker Compose
+```yaml
+services:
+  app:
+    image: ghcr.io/go-faster/simon:0.6.1
+    environment:
+      - OTEL_LOG_LEVEL=debug
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otelcol:4317
+      - OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false
+      - OTEL_GO_X_RESOURCE=true
+      - OTEL_METRIC_EXPORT_INTERVAL=1000
+      - OTEL_METRIC_EXPORT_TIMEOUT=500
+```
+
+#### Kubernetes
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simon-client
+  namespace: simon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simon-client
+  template:
+    metadata:
+      labels:
+        app: simon-client
+    spec:
+      containers:
+        - name: ingest
+          image: ghcr.io/go-faster/simon:0.6.1
+          env:
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
+            - name: OTEL_LOG_LEVEL
+              value: "debug"
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            - name: OTEL_GO_X_DEPRECATED_RUNTIME_METRICS
+              value: "false"
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "1000"
+            - name: OTEL_METRIC_EXPORT_TIMEOUT
+              value: "500"
 ```
 
 ### Reference
