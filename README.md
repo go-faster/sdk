@@ -123,6 +123,7 @@ spec:
 | `PPROF_ROUTES`                        | List of enabled pprof routes     | `cmdline,profile`       | See below              |
 | `PPROF_ADDR`                          | Enable pprof and listen on addr  | `0.0.0.0:9010`          | N/A                    |
 | `OTEL_LOG_LEVEL`                      | Log level                        | `debug`                 | `info`                 |
+| `OTEL_LOGS_EXPORTER`                  | Logs exporter to use             | `none`                  | `otlp`                 |
 | `METRICS_ADDR`                        | Prometheus addr (fallback)       | `localhost:9464`        | Prometheus addr        |
 | `OTEL_METRICS_EXPORTER`               | Metrics exporter to use          | `prometheus`            | `otlp`                 |
 | `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics OTLP protocol to use     | `http`                  | `grpc`                 |
@@ -174,6 +175,7 @@ To fix that, configure exporters accordingly. For example, this will disable bot
 ```bash
 export OTEL_TRACES_EXPORTER="none"
 export OTEL_METRICS_EXPORTER="none"
+export OTEL_LOGS_EXPORTER="none"
 ```
 
 To enable Prometheus exporter, set `OTEL_METRICS_EXPORTER=prometheus` and `OTEL_EXPORTER_PROMETHEUS_HOST` and `OTEL_EXPORTER_PROMETHEUS_PORT` accordingly.

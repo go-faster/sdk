@@ -49,14 +49,24 @@ type Telemetry struct {
 	prom *promClient.Registry
 	http []httpEndpoint
 
-	tracerProvider trace.TracerProvider
-	meterProvider  metric.MeterProvider
-	loggerProvider log.LoggerProvider
+	tracerProvider  trace.TracerProvider
+	meterProvider   metric.MeterProvider
+	loggerProvider  log.LoggerProvider
+	shutdownContext context.Context
 
 	resource   *resource.Resource
 	propagator propagation.TextMapPropagator
 
 	shutdowns []shutdown
+}
+
+// ShutdownContext is context for triggering graceful shutdown.
+// It is cancelled on SIGINT.
+//
+// Base context can be used during shutdown to finish pending operations, it will be cancelled later
+// on timeout.
+func (m *Telemetry) ShutdownContext() context.Context {
+	return m.shutdownContext
 }
 
 func (m *Telemetry) registerShutdown(name string, fn func(ctx context.Context) error) {
@@ -91,10 +101,17 @@ func (m *Telemetry) run(ctx context.Context) error {
 	}
 	wg.Go(func() error {
 		// Wait until g ctx canceled, then try to shut down server.
-		<-ctx.Done()
+		baseCtx := ctx
+		select {
+		case <-ctx.Done():
+			// Non-graceful shutdown.
+			baseCtx = context.Background()
+		case <-m.ShutdownContext().Done():
+			// Graceful shutdown attempt.
+		}
 
 		m.lg.Debug("Shutting down metrics")
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		ctx, cancel := context.WithTimeout(baseCtx, shutdownTimeout)
 		defer cancel()
 
 		// Not returning error, just reporting to log.
@@ -107,6 +124,7 @@ func (m *Telemetry) run(ctx context.Context) error {
 }
 
 func (m *Telemetry) shutdown(ctx context.Context) {
+	defer m.lg.Debug("Shut down")
 	var wg sync.WaitGroup
 
 	// Launch shutdowns in parallel.
@@ -178,7 +196,7 @@ func (z zapErrorHandler) Handle(err error) {
 }
 
 func newTelemetry(
-	ctx context.Context,
+	baseCtx, shutdownCtx context.Context,
 	lg *zap.Logger,
 	res *resource.Resource,
 	meterOptions []autometer.Option,
@@ -194,7 +212,10 @@ func newTelemetry(
 	m := &Telemetry{
 		lg:       lg,
 		resource: res,
+
+		shutdownContext: shutdownCtx,
 	}
+	ctx := baseCtx
 	{
 		provider, stop, err := autologs.NewLoggerProvider(ctx,
 			include(logsOptions,

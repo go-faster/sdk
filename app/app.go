@@ -76,7 +76,11 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 		o.apply(&opts)
 	}
 
-	ctx, cancel := signal.NotifyContext(opts.ctx, os.Interrupt)
+	ctx := opts.ctx
+	ctx, baseCtxCancel := context.WithCancel(ctx)
+	defer baseCtxCancel()
+
+	shutdownCtx, cancel := signal.NotifyContext(opts.ctx, os.Interrupt)
 	defer cancel()
 
 	// Setup logger.
@@ -101,7 +105,12 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 		panic(fmt.Sprintf("failed to get resource: %v", err))
 	}
 
-	m, err := newTelemetry(ctx, lg.Named("metrics"), res, opts.meterOptions, opts.tracerOptions, opts.loggerOptions)
+	m, err := newTelemetry(
+		ctx, shutdownCtx,
+		lg.Named("metrics"),
+		res,
+		opts.meterOptions, opts.tracerOptions, opts.loggerOptions,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -147,6 +156,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 		if err := f(ctx, zctx.From(ctx), m); err != nil {
 			if errors.Is(err, ctx.Err()) {
 				// Parent context got cancelled, error is expected.
+				// TODO(ernado): check for shutdownCtx instead.
 				lg.Debug("Graceful shutdown")
 				return nil
 			}
@@ -169,17 +179,20 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	go func() {
 		// Guaranteed way to kill application.
 		// Helps if f is stuck, e.g. deadlock during shutdown.
-		<-ctx.Done()
+		<-shutdownCtx.Done()
+		lg.Info("Shutdown triggered. Waiting for graceful shutdown")
+		time.Sleep(shutdownTimeout)
+		baseCtxCancel()
 
 		// Context is canceled, giving application time to shut down gracefully.
 
-		lg.Info("Waiting for application shutdown")
+		lg.Info("Base context cancelled. Forcing shutdown")
 		time.Sleep(watchdogTimeout)
 
 		// Application is not shutting down gracefully, kill it.
 		// This code should not be executed if f is already returned.
 
-		lg.Warn("Graceful shutdown watchdog triggered: forcing shutdown")
+		lg.Warn("Graceful shutdown watchdog triggered: forcing hard shutdown")
 		os.Exit(exitCodeWatchdog)
 	}()
 
