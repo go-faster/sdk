@@ -53,20 +53,26 @@ type Telemetry struct {
 	meterProvider   metric.MeterProvider
 	loggerProvider  log.LoggerProvider
 	shutdownContext context.Context
+	baseContext     context.Context
 
-	resource   *resource.Resource
+	resource *resource.Resource
+
 	propagator propagation.TextMapPropagator
-
-	shutdowns []shutdown
+	shutdowns  []shutdown
 }
 
 // ShutdownContext is context for triggering graceful shutdown.
 // It is cancelled on SIGINT.
 //
-// Base context can be used during shutdown to finish pending operations, it will be cancelled later
+// Base context [Telemetry.BaseContext] can be used during shutdown to finish pending operations, it will be cancelled later
 // on timeout.
 func (m *Telemetry) ShutdownContext() context.Context {
 	return m.shutdownContext
+}
+
+// BaseContext is base context for the application.
+func (m *Telemetry) BaseContext() context.Context {
+	return m.baseContext
 }
 
 func (m *Telemetry) registerShutdown(name string, fn func(ctx context.Context) error) {
@@ -214,6 +220,7 @@ func newTelemetry(
 		resource: res,
 
 		shutdownContext: shutdownCtx,
+		baseContext:     baseCtx,
 	}
 	ctx := baseCtx
 	{

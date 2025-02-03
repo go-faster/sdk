@@ -120,7 +120,10 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	if ctx, err = autologs.Setup(ctx, m.LoggerProvider(), opts.zapTee); err != nil {
 		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
+
 	shutdownCtx = zctx.Base(shutdownCtx, zctx.From(ctx))
+	m.shutdownContext = shutdownCtx
+	m.baseContext = ctx
 
 	{
 		// Automatically setting GOMAXPROCS.
@@ -155,7 +158,8 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 				rerr = fmt.Errorf("shutting down (panic): %v", ec)
 			}
 		}()
-		if err := f(ctx, zctx.From(ctx), m); err != nil {
+		m.baseContext = ctx
+		if err := f(m.shutdownContext, zctx.From(ctx), m); err != nil {
 			if errors.Is(err, ctx.Err()) {
 				// Parent context got cancelled, error is expected.
 				// TODO(ernado): check for shutdownCtx instead.
