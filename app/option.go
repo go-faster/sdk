@@ -16,6 +16,7 @@ type options struct {
 	zapConfig  zap.Config
 	zapOptions []zap.Option
 	zapTee     bool
+	otelZap    bool
 	ctx        context.Context
 
 	meterOptions    []autometer.Option
@@ -54,6 +55,14 @@ func WithZapConfig(cfg zap.Config) Option {
 func WithZapOptions(opts ...zap.Option) Option {
 	return optionFunc(func(o *options) {
 		o.zapOptions = opts
+	})
+}
+
+// WithZapOpenTelemetry enabels OpenTelemetry mode for zap.
+// See [zctx.WithOpenTelemetryZap].
+func WithZapOpenTelemetry() Option {
+	return optionFunc(func(o *options) {
+		o.otelZap = true
 	})
 }
 

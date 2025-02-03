@@ -30,6 +30,7 @@ func main() {
 				return zapcore.NewTee(core)
 			}),
 		),
+		app.WithZapOpenTelemetry(),
 
 		// Redirect metrics and traces to /dev/null.
 		app.WithMeterOptions(autometer.WithWriter(io.Discard)),

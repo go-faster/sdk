@@ -77,6 +77,9 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	}
 
 	ctx := opts.ctx
+	if opts.otelZap {
+		ctx = zctx.WithOpenTelemetryZap(ctx)
+	}
 	ctx, baseCtxCancel := context.WithCancel(ctx)
 	defer baseCtxCancel()
 
