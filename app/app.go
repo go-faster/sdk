@@ -80,9 +80,6 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	ctx, baseCtxCancel := context.WithCancel(ctx)
 	defer baseCtxCancel()
 
-	shutdownCtx, cancel := signal.NotifyContext(opts.ctx, os.Interrupt)
-	defer cancel()
-
 	// Setup logger.
 	if s := os.Getenv("OTEL_LOG_LEVEL"); s != "" {
 		var lvl zapcore.Level
@@ -98,6 +95,10 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	defer func() { _ = lg.Sync() }()
 	// Add logger to root context.
 	ctx = zctx.Base(ctx, lg)
+
+	// Explicit context for graceful shutdown.
+	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer cancel()
 
 	lg.Info("Starting")
 	res, err := opts.resourceFn(ctx)
@@ -119,6 +120,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 	if ctx, err = autologs.Setup(ctx, m.LoggerProvider(), opts.zapTee); err != nil {
 		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
+	shutdownCtx = zctx.Base(shutdownCtx, zctx.From(ctx))
 
 	{
 		// Automatically setting GOMAXPROCS.
