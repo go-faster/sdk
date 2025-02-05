@@ -3,11 +3,13 @@ module github.com/go-faster/sdk
 go 1.22.7
 
 require (
+	github.com/KimMachineGun/automemlimit v0.7.0
 	github.com/go-faster/errors v0.7.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.2.0
 	github.com/prometheus/client_golang v1.20.5
+	github.com/samber/slog-zap/v2 v2.6.2
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/pdata v1.24.0
 	go.opentelemetry.io/contrib/bridges/otelzap v0.9.0
@@ -37,7 +39,6 @@ require (
 )
 
 require (
-	github.com/KimMachineGun/automemlimit v0.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -60,7 +61,6 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/samber/slog-common v0.18.1 // indirect
-	github.com/samber/slog-zap/v2 v2.6.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.34.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.34.0 // indirect
