@@ -5,12 +5,15 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
 	"time"
 
+	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/go-faster/errors"
+	slogzap "github.com/samber/slog-zap/v2"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
@@ -145,6 +148,15 @@ func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...
 			); err != nil {
 				lg.Warn("Failed to set GOMAXPROCS", zap.Error(err))
 			}
+		}
+	}
+	{
+		// Automatically set GOMEMLIMIT.
+		// https://github.com/KimMachineGun/automemlimit
+		// https://tip.golang.org/doc/gc-guide#Memory_limit
+		logger := slog.New(slogzap.Option{Level: slog.LevelDebug, Logger: lg}.NewZapHandler())
+		if _, err := memlimit.SetGoMemLimitWithOpts(memlimit.WithLogger(logger)); err != nil {
+			lg.Warn("Failed to set memory limit", zap.Error(err))
 		}
 	}
 

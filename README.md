@@ -2,6 +2,7 @@
 
 SDK for go-faster applications.
 Implements automatic setup of observability and daemonization based on environment variables.
+Also automatically sets up `GOMAXPROCS` and `GOMEMLIMIT`.
 
 ## Packages
 
