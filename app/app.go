@@ -47,7 +47,7 @@ func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
 // Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
 // with exitCodeWatchdog.
-func Run(f func(ctx context.Context, lg *zap.Logger, m *Telemetry) error, op ...Option) {
+func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
 		zapConfig: zap.NewProductionConfig(),
