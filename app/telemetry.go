@@ -42,7 +42,7 @@ type httpEndpoint struct {
 // Deprecated: use Telemetry.
 type Metrics = Telemetry
 
-// Telemetry wraps all telemetry for application and helper methods for them.
+// Telemetry wraps all telemetry for application and helper methods for it.
 type Telemetry struct {
 	lg *zap.Logger
 
