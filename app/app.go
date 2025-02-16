@@ -42,6 +42,12 @@ func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
 	}, op...)
 }
 
+func defaultZapConfig() zap.Config {
+	cfg := zap.NewProductionConfig()
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	return cfg
+}
+
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
@@ -50,7 +56,7 @@ func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: zap.NewProductionConfig(),
+		zapConfig: defaultZapConfig(),
 		zapTee:    true,
 		ctx:       context.Background(),
 		resourceOptions: []resource.Option{
