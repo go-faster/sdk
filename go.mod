@@ -13,7 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/samber/slog-zap/v2 v2.6.2
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/collector/pdata v1.31.0
+	go.opentelemetry.io/collector/pdata v1.32.0
 	go.opentelemetry.io/contrib/bridges/otelzap v0.10.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.60.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.60.0
