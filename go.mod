@@ -10,7 +10,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.2.4
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/samber/slog-zap/v2 v2.6.2
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/pdata v1.36.0
