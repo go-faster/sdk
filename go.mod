@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/KimMachineGun/automemlimit v0.7.4
+	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/go-faster/errors v0.7.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/grafana/otel-profiling-go v0.5.1
