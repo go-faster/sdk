@@ -50,13 +50,6 @@ func encodeTimeLayout(t time.Time, layout string, enc zapcore.PrimitiveArrayEnco
 	enc.AppendString(t.Format(layout))
 }
 
-// ShortCallerEncoder serializes a caller in package/file:line format, trimming
-// all but the final directory from the full path.
-func shortCallerEncoder(_ zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-	// TODO: consider using a byte-oriented API to save an allocation.
-	enc.AppendString("caller.go")
-}
-
 func TestEncoder(t *testing.T) {
 	const encoderName = "zapencoder"
 	err := zap.RegisterEncoder(encoderName, func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
@@ -65,19 +58,21 @@ func TestEncoder(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cfg := zap.NewProductionConfig()
-	cfg.Encoding = encoderName
-	cfg.EncoderConfig.EncodeTime = constantTimeEncoder(time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC))
-	cfg.EncoderConfig.EncodeCaller = shortCallerEncoder
-
+	// open a file, and hold reference to the close
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "output.jsonl")
-	outErrPath := filepath.Join(dir, "error.jsonl")
-	cfg.OutputPaths = []string{outPath}
-	cfg.ErrorOutputPaths = []string{outErrPath}
 
-	lg, err := cfg.Build()
+	writer, closeFile, err := zap.Open(outPath)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		closeFile()
+	})
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = constantTimeEncoder(time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC))
+
+	core := zapcore.NewCore(zapencoder.New(encoderConfig), writer, zap.NewAtomicLevel())
+	lg := zap.New(core)
 
 	ctx := t.Context()
 	lg.Info("With context",
