@@ -1,0 +1,133 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - dogsled
+    - errcheck
+    - goconst
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+    - errcheck
+  settings:
+    dupl:
+      threshold: 120
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - exitAfterDefer
+        - whyNoLint
+        - singleCaseSwitch
+        - commentedOutCode
+        - appendAssign
+        - unnecessaryBlock
+        - redundantSprint
+        - octalLiteral
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+  exclusions:
+    paths-except:
+      - internal/otel-iface-gen
+    generated: lax
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - funlen
+          - gocognit
+          - goconst
+          - gocyclo
+          - gosec
+          - lll
+          - scopelint
+        path: _test\.go
+      - linters:
+          - gocritic
+        path: _test\.go
+        text: Combine
+      - linters:
+          - gocritic
+        path: _test\.go
+        text: dupArg
+        source: (assert|require).+Equal
+      - linters:
+          - govet
+        text: declaration of "(err|ctx|log|lg|c)"
+      - linters:
+          - revive
+        text: 'receiver-naming: receiver name \S+ should be consistent with previous receiver name \S+ for invalid-type'
+      - linters:
+          - funlen
+          - gocognit
+          - goconst
+          - gocyclo
+        path: main\.go
+      - linters:
+          - gosec
+        path: main\.go
+        text: G307
+      - linters:
+          - staticcheck
+        text: ST1003
+        source: func Fuzz.+\(f \*testing\.F\)
+      - linters:
+          - revive
+        path: (internal|cmd)
+        text: package-comments
+      - linters:
+          - gosec
+        path: (install)
+        text: G204
+      - linters:
+          - gosec
+        text: G115
+      - linters:
+          - revive
+        text: comment on exported const .+ should be of the form
+      - linters:
+          - gocritic
+        text: "importShadow: shadow of imported from 'github.com/stretchr/testify/suite' package 'suite'"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/go-faster/sdk
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

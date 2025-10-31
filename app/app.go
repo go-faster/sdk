@@ -9,10 +9,12 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/go-faster/errors"
+	"github.com/go-faster/sdk/internal/zapencoder"
 	slogzap "github.com/samber/slog-zap/v2"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -42,8 +44,17 @@ func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
 	}, op...)
 }
 
+var _registerZapEncoder sync.Once
+
 func defaultZapConfig() zap.Config {
 	cfg := zap.NewProductionConfig()
+	const encoderName = "github.com/go-faster/sdk/zapencoder.JSON"
+	_registerZapEncoder.Do(func() {
+		_ = zap.RegisterEncoder(encoderName, func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
+			return zapencoder.New(config), nil
+		})
+	})
+	cfg.Encoding = encoderName
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	return cfg
 }

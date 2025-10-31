@@ -1,0 +1,2 @@
+{"level":"info","ts":"2024-01-02T15:04:05Z","msg":"With context"}
+{"level":"info","ts":"2024-01-02T15:04:05Z","msg":"With span","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}
