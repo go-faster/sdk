@@ -23,8 +23,8 @@ const (
 
 func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 	for _, f := range fields {
-		if f.Interface != nil && f.Type == zapcore.StringerType {
-			// Test for ctx.
+		if f.Interface != nil && f.Type == zapcore.StringerType && f.Key == "ctx" {
+			// Test for context.Context.
 			ctx, ok := f.Interface.(context.Context)
 			if ok {
 				spanCtx := trace.SpanContextFromContext(ctx)
@@ -37,6 +37,7 @@ func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 					}
 				}
 
+				// Do not print ctx field.
 				continue
 			}
 		}
