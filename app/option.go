@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 
+	"github.com/go-faster/sdk/internal/zapencoder"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
@@ -13,17 +14,38 @@ import (
 )
 
 type options struct {
-	zapConfig  zap.Config
-	zapOptions []zap.Option
-	zapTee     bool
-	otelZap    bool
-	ctx        context.Context
+	zapConfig       zap.Config
+	zapCustomConfig bool
+	zapOptions      []zap.Option
+	zapTee          bool
+	otelZap         bool
+	ctx             context.Context
 
 	meterOptions    []autometer.Option
 	tracerOptions   []autotracer.Option
 	loggerOptions   []autologs.Option
 	resourceOptions []resource.Option
 	resourceFn      func(ctx context.Context) (*resource.Resource, error)
+}
+
+func (o *options) buildLogger() *zap.Logger {
+	if !o.zapCustomConfig {
+		// HACK: to use custom encoding for Any("ctx', ctx) fields
+		// we need to use custom zap.Config and custom encoder.
+		cfg := zapencoder.Config(defaultZapConfig())
+		lg, err := cfg.Build(o.zapOptions...)
+		if err != nil {
+			panic("failed to build zap logger: " + err.Error())
+		}
+		return lg
+	}
+
+	lg, err := o.zapConfig.Build(o.zapOptions...)
+	if err != nil {
+		panic("failed to build zap logger: " + err.Error())
+	}
+
+	return lg
 }
 
 type optionFunc func(*options)
@@ -48,6 +70,7 @@ func WithZapTee(teeToStderr bool) Option {
 func WithZapConfig(cfg zap.Config) Option {
 	return optionFunc(func(o *options) {
 		o.zapConfig = cfg
+		o.zapCustomConfig = true
 	})
 }
 

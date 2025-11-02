@@ -71,10 +71,13 @@ func TestEncoder(t *testing.T) {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = constantTimeEncoder(time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC))
 
-	core := zapcore.NewCore(zapencoder.New(encoderConfig), writer, zap.NewAtomicLevel())
+	core := zapencoder.NewCustomCore(zapencoder.New(encoderConfig), writer, zap.NewAtomicLevel())
 	lg := zap.New(core)
 
 	ctx := t.Context()
+	lg.With(
+		zap.Any("ctx", ctx),
+	).Info("With context")
 	lg.Info("With context",
 		zap.Any("ctx", ctx),
 	)

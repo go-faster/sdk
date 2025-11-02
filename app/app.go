@@ -111,10 +111,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		}
 		opts.zapConfig.Level.SetLevel(lvl)
 	}
-	lg, err := opts.zapConfig.Build(opts.zapOptions...)
-	if err != nil {
-		panic(err)
-	}
+	lg := opts.buildLogger()
 	defer func() { _ = lg.Sync() }()
 	// Add logger to root context.
 	ctx = zctx.Base(ctx, lg)
