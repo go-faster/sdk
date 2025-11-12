@@ -189,9 +189,8 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		}()
 		m.baseContext = ctx
 		if err := f(m.shutdownContext, zctx.From(ctx), m); err != nil {
-			if errors.Is(err, ctx.Err()) {
+			if errors.Is(err, m.shutdownContext.Err()) {
 				// Parent context got cancelled, error is expected.
-				// TODO(ernado): check for shutdownCtx instead.
 				lg.Debug("Graceful shutdown")
 				return nil
 			}
