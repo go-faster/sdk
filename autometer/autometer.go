@@ -29,9 +29,10 @@ const (
 	expNone       = "none" // no-op
 	expPrometheus = "prometheus"
 
-	protoHTTP    = "http"
-	protoGRPC    = "grpc"
-	defaultProto = protoGRPC
+	protoHTTP         = "http"
+	protoHTTPProtobuf = "http/protobuf"
+	protoGRPC         = "grpc"
+	defaultProto      = protoGRPC
 )
 
 const (
@@ -118,7 +119,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		}
 		lg.Debug("Using OTLP metrics exporter", zap.String("protocol", proto))
 		switch proto {
-		case protoHTTP:
+		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "create OTLP HTTP metric exporter")

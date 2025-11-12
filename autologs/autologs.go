@@ -22,9 +22,10 @@ const (
 	expOTLP = "otlp"
 	expNone = "none" // no-op
 
-	protoHTTP    = "http"
-	protoGRPC    = "grpc"
-	defaultProto = protoGRPC
+	protoHTTP         = "http"
+	protoHTTPProtobuf = "http/protobuf"
+	protoGRPC         = "grpc"
+	defaultProto      = protoGRPC
 )
 
 const (
@@ -85,7 +86,7 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		}
 		lg.Debug("Using OTLP logs exporter", zap.String("protocol", proto))
 		switch proto {
-		case protoHTTP:
+		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlploghttp.New(ctx)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "create OTLP HTTP logs exporter")

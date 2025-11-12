@@ -24,9 +24,10 @@ const (
 	expOTLP = "otlp"
 	expNone = "none" // no-op
 
-	protoHTTP    = "http"
-	protoGRPC    = "grpc"
-	defaultProto = protoGRPC
+	protoHTTP         = "http"
+	protoHTTPProtobuf = "http/protobuf"
+	protoGRPC         = "grpc"
+	defaultProto      = protoGRPC
 )
 
 const (
@@ -84,7 +85,7 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		lg.Debug("Using OTLP trace exporter", zap.String("protocol", proto))
 		switch proto {
-		case protoHTTP:
+		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlptracehttp.New(ctx)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "create OTLP HTTP trace exporter")
@@ -96,7 +97,6 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 				return nil, nil, errors.Wrap(err, "create OTLP gRPC trace exporter")
 			}
 			return ret(exp)
-
 		default:
 			return nil, nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
 		}
