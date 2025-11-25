@@ -28,6 +28,11 @@ type options struct {
 	resourceFn      func(ctx context.Context) (*resource.Resource, error)
 }
 
+func (o *options) modifyZapConfig(cb func(*zap.Config)) {
+	cb(&o.zapConfig)
+	o.zapCustomConfig = true
+}
+
 func (o *options) buildLogger() *zap.Logger {
 	if !o.zapCustomConfig {
 		// HACK: to use custom encoding for Any("ctx', ctx) fields
@@ -69,8 +74,9 @@ func WithZapTee(teeToStderr bool) Option {
 // WithZapConfig sets the default zap config for the application.
 func WithZapConfig(cfg zap.Config) Option {
 	return optionFunc(func(o *options) {
-		o.zapConfig = cfg
-		o.zapCustomConfig = true
+		o.modifyZapConfig(func(c *zap.Config) {
+			*c = cfg
+		})
 	})
 }
 
