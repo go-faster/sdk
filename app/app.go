@@ -109,7 +109,9 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		if err := lvl.UnmarshalText([]byte(s)); err != nil {
 			panic(err)
 		}
-		opts.zapConfig.Level.SetLevel(lvl)
+		opts.modifyZapConfig(func(c *zap.Config) {
+			c.Level.SetLevel(lvl)
+		})
 	}
 	lg := opts.buildLogger()
 	defer func() { _ = lg.Sync() }()
