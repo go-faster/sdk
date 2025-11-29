@@ -14,23 +14,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func testEncoderConfig() zapcore.EncoderConfig {
-	return zapcore.EncoderConfig{
-		MessageKey:     "msg",
-		LevelKey:       "level",
-		NameKey:        "name",
-		TimeKey:        "ts",
-		CallerKey:      "caller",
-		FunctionKey:    "func",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     "\n",
-		EncodeTime:     zapcore.EpochTimeEncoder,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-}
-
 func constantTimeEncoder(now time.Time) zapcore.TimeEncoder {
 	return func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		encodeTimeLayout(now, time.RFC3339Nano, enc)
@@ -51,13 +34,6 @@ func encodeTimeLayout(t time.Time, layout string, enc zapcore.PrimitiveArrayEnco
 }
 
 func TestEncoder(t *testing.T) {
-	const encoderName = "zapencoder"
-	err := zap.RegisterEncoder(encoderName, func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
-		enc := zapencoder.New(config)
-		return enc, nil
-	})
-	require.NoError(t, err)
-
 	// open a file, and hold reference to the close
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "output.jsonl")
@@ -70,16 +46,16 @@ func TestEncoder(t *testing.T) {
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = constantTimeEncoder(time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC))
-
-	core := zapencoder.NewCustomCore(zapencoder.New(encoderConfig), writer, zap.NewAtomicLevel())
+	encoderConfig.NewReflectedEncoder = zapencoder.NewReflectedEncoder
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), writer, zapcore.DebugLevel)
 	lg := zap.New(core)
 
 	ctx := t.Context()
 	lg.With(
-		zap.Any("ctx", ctx),
+		zap.Reflect("ctx", ctx),
 	).Info("With context")
 	lg.Info("With context",
-		zap.Any("ctx", ctx),
+		zap.Reflect("ctx", ctx),
 	)
 
 	ctx = trace.ContextWithSpanContext(ctx,
@@ -90,7 +66,7 @@ func TestEncoder(t *testing.T) {
 	)
 
 	lg.Info("With span",
-		zap.Any("ctx", ctx),
+		zap.Reflect("ctx", ctx),
 	)
 
 	require.NoError(t, lg.Sync())

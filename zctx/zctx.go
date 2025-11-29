@@ -29,7 +29,7 @@ func (l *logger) SetSpan(ctx context.Context, s trace.SpanContext) {
 	if ctx.Value(otelzapKey{}) != nil {
 		l.ctx = ctx
 		l.lg = l.base.With(
-			zap.Any("ctx", ctx),
+			zap.Reflect("ctx", ctx),
 		)
 	} else {
 		l.lg = l.base.With(
