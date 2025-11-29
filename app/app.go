@@ -46,6 +46,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 	opts := options{
 		zapConfig: zap.NewProductionConfig(),
 		zapTee:    true,
+		otelZap:   true,
 		ctx:       context.Background(),
 		resourceOptions: []resource.Option{
 			resource.WithProcessRuntimeDescription(),
