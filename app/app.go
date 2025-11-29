@@ -36,13 +36,6 @@ const (
 	watchdogTimeout = shutdownTimeout + time.Second*5
 )
 
-// Go runs f until interrupt.
-func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
-	Run(func(ctx context.Context, _ *zap.Logger, t *Telemetry) error {
-		return f(ctx, t)
-	}, op...)
-}
-
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
