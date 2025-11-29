@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 
-	"github.com/go-faster/sdk/internal/zapencoder"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
@@ -14,12 +13,11 @@ import (
 )
 
 type options struct {
-	zapConfig       zap.Config
-	zapCustomConfig bool
-	zapOptions      []zap.Option
-	zapTee          bool
-	otelZap         bool
-	ctx             context.Context
+	zapConfig  zap.Config
+	zapOptions []zap.Option
+	zapTee     bool
+	otelZap    bool
+	ctx        context.Context
 
 	meterOptions    []autometer.Option
 	tracerOptions   []autotracer.Option
@@ -30,21 +28,9 @@ type options struct {
 
 func (o *options) modifyZapConfig(cb func(*zap.Config)) {
 	cb(&o.zapConfig)
-	o.zapCustomConfig = true
 }
 
 func (o *options) buildLogger() *zap.Logger {
-	if !o.zapCustomConfig {
-		// HACK: to use custom encoding for Any("ctx', ctx) fields
-		// we need to use custom zap.Config and custom encoder.
-		cfg := zapencoder.Config(defaultZapConfig())
-		lg, err := cfg.Build(o.zapOptions...)
-		if err != nil {
-			panic("failed to build zap logger: " + err.Error())
-		}
-		return lg
-	}
-
 	lg, err := o.zapConfig.Build(o.zapOptions...)
 	if err != nil {
 		panic("failed to build zap logger: " + err.Error())
@@ -89,9 +75,18 @@ func WithZapOptions(opts ...zap.Option) Option {
 
 // WithZapOpenTelemetry enabels OpenTelemetry mode for zap.
 // See [zctx.WithOpenTelemetryZap].
+//
+// Deprecated: enabled by default.
 func WithZapOpenTelemetry() Option {
 	return optionFunc(func(o *options) {
 		o.otelZap = true
+	})
+}
+
+// WithoutZapOpenTelemetry disables OpenTelemetry mode for zap.
+func WithoutZapOpenTelemetry() Option {
+	return optionFunc(func(o *options) {
+		o.otelZap = false
 	})
 }
 

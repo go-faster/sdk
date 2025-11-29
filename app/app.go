@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -37,28 +36,6 @@ const (
 	watchdogTimeout = shutdownTimeout + time.Second*5
 )
 
-// Go runs f until interrupt.
-func Go(f func(ctx context.Context, t *Telemetry) error, op ...Option) {
-	Run(func(ctx context.Context, _ *zap.Logger, t *Telemetry) error {
-		return f(ctx, t)
-	}, op...)
-}
-
-var _registerZapEncoder sync.Once
-
-func defaultZapConfig() zap.Config {
-	cfg := zap.NewProductionConfig()
-	const encoderName = "github.com/go-faster/sdk/zapencoder.JSON"
-	_registerZapEncoder.Do(func() {
-		_ = zap.RegisterEncoder(encoderName, func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
-			return zapencoder.New(config), nil
-		})
-	})
-	cfg.Encoding = encoderName
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	return cfg
-}
-
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
@@ -67,8 +44,9 @@ func defaultZapConfig() zap.Config {
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: defaultZapConfig(),
+		zapConfig: zap.NewProductionConfig(),
 		zapTee:    true,
+		otelZap:   true,
 		ctx:       context.Background(),
 		resourceOptions: []resource.Option{
 			resource.WithProcessRuntimeDescription(),
@@ -113,6 +91,12 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 			c.Level.SetLevel(lvl)
 		})
 	}
+	if opts.otelZap {
+		opts.modifyZapConfig(func(c *zap.Config) {
+			c.EncoderConfig.NewReflectedEncoder = zapencoder.NewReflectedEncoder
+		})
+	}
+
 	lg := opts.buildLogger()
 	defer func() { _ = lg.Sync() }()
 	// Add logger to root context.
