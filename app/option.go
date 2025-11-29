@@ -75,9 +75,18 @@ func WithZapOptions(opts ...zap.Option) Option {
 
 // WithZapOpenTelemetry enabels OpenTelemetry mode for zap.
 // See [zctx.WithOpenTelemetryZap].
+//
+// Deprecated: enabled by default.
 func WithZapOpenTelemetry() Option {
 	return optionFunc(func(o *options) {
 		o.otelZap = true
+	})
+}
+
+// WithoutZapOpenTelemetry disables OpenTelemetry mode for zap.
+func WithoutZapOpenTelemetry() Option {
+	return optionFunc(func(o *options) {
+		o.otelZap = false
 	})
 }
 
