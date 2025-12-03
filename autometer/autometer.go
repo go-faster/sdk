@@ -78,7 +78,8 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 
 	ret := func(r sdkmetric.Reader) (metric.MeterProvider, func(ctx context.Context) error, error) {
 		metricOptions = append(metricOptions, sdkmetric.WithReader(r))
-		return sdkmetric.NewMeterProvider(metricOptions...), r.Shutdown, nil
+		provider := sdkmetric.NewMeterProvider(metricOptions...)
+		return provider, provider.Shutdown, nil
 	}
 
 	// Metrics exporter.

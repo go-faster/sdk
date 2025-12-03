@@ -70,7 +70,8 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 	}
 	ret := func(e sdktrace.SpanExporter) (trace.TracerProvider, func(ctx context.Context) error, error) {
 		traceOptions = append(traceOptions, sdktrace.WithBatcher(e))
-		return sdktrace.NewTracerProvider(traceOptions...), e.Shutdown, nil
+		provider := sdktrace.NewTracerProvider(traceOptions...)
+		return provider, provider.Shutdown, nil
 	}
 
 	exporter := strings.TrimSpace(getEnvOr("OTEL_TRACES_EXPORTER", expOTLP))
