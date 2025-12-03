@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/go-faster/sdk/zctx"
 )
@@ -58,8 +59,8 @@ type ShutdownFunc func(ctx context.Context) error
 
 // NewLoggerProvider initializes new [log.LoggerProvider] with the given options from environment variables.
 func NewLoggerProvider(ctx context.Context, options ...Option) (
-	meterProvider log.LoggerProvider,
-	meterShutdown ShutdownFunc,
+	logProvider log.LoggerProvider,
+	logShutdown ShutdownFunc,
 	err error,
 ) {
 	cfg := newConfig(options)
@@ -68,10 +69,14 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 	if cfg.res != nil {
 		logOptions = append(logOptions, sdklog.WithResource(cfg.res))
 	}
+
 	ret := func(e sdklog.Exporter) (log.LoggerProvider, func(ctx context.Context) error, error) {
-		logOptions = append(logOptions, sdklog.WithProcessor(
-			sdklog.NewBatchProcessor(e),
-		))
+		logOptions = append(logOptions,
+			sdklog.WithProcessor(&levelFilterProcessor{
+				next:     sdklog.NewBatchProcessor(e),
+				severity: zapLevelToOTelSeverity(lg.Level()),
+			}),
+		)
 		return sdklog.NewLoggerProvider(logOptions...), e.Shutdown, nil
 	}
 	exporter := strings.TrimSpace(getEnvOr("OTEL_LOGS_EXPORTER", expOTLP))
@@ -133,4 +138,58 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		return ret(exp)
 	}
 	return nil, nil, errors.Errorf("unsupported OTEL_LOGS_EXPORTER %q", exporter)
+}
+
+// levelFilterProcessor implements level filtering, since otlplog does not.
+//
+// Fuck you too, OpenTelemetry.
+type levelFilterProcessor struct {
+	next     sdklog.Processor
+	severity log.Severity
+}
+
+var (
+	_ sdklog.FilterProcessor = (*levelFilterProcessor)(nil)
+	_ sdklog.Processor       = (*levelFilterProcessor)(nil)
+)
+
+// Enabled implements [sdklog.FilterProcessor].
+func (l *levelFilterProcessor) Enabled(ctx context.Context, param sdklog.EnabledParameters) bool {
+	return param.Severity >= l.severity
+}
+
+// OnEmit implements [sdklog.Processor].
+func (l *levelFilterProcessor) OnEmit(ctx context.Context, record *sdklog.Record) error {
+	return l.next.OnEmit(ctx, record)
+}
+
+// ForceFlush implements [sdklog.Processor].
+func (l *levelFilterProcessor) ForceFlush(ctx context.Context) error {
+	return l.next.ForceFlush(ctx)
+}
+
+// Shutdown implements [sdklog.Processor].
+func (l *levelFilterProcessor) Shutdown(ctx context.Context) error {
+	return l.next.Shutdown(ctx)
+}
+
+func zapLevelToOTelSeverity(level zapcore.Level) log.Severity {
+	switch level {
+	case zapcore.DebugLevel:
+		return log.SeverityDebug
+	case zapcore.InfoLevel:
+		return log.SeverityInfo
+	case zapcore.WarnLevel:
+		return log.SeverityWarn
+	case zapcore.ErrorLevel:
+		return log.SeverityError
+	case zapcore.DPanicLevel:
+		return log.SeverityFatal1
+	case zapcore.PanicLevel:
+		return log.SeverityFatal2
+	case zapcore.FatalLevel:
+		return log.SeverityFatal3
+	default:
+		return log.SeverityUndefined
+	}
 }
