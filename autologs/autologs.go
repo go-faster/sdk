@@ -77,7 +77,8 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 				severity: zapLevelToOTelSeverity(lg.Level()),
 			}),
 		)
-		return sdklog.NewLoggerProvider(logOptions...), e.Shutdown, nil
+		provider := sdklog.NewLoggerProvider(logOptions...)
+		return provider, provider.Shutdown, nil
 	}
 	exporter := strings.TrimSpace(getEnvOr("OTEL_LOGS_EXPORTER", expOTLP))
 	switch exporter {
