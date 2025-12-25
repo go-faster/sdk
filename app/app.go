@@ -60,10 +60,11 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 			resource.WithFromEnv(),
 		},
 	}
-	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
+	opts.resourceFn = func(ctx context.Context, lg *zap.Logger) (*resource.Resource, error) {
 		r, err := resource.New(ctx, opts.resourceOptions...)
 		if err != nil {
-			return nil, errors.Wrap(err, "new")
+			lg.Warn("Failed to create resource, falling back to default", zap.Error(err))
+			return resource.Default(), nil
 		}
 		return resource.Merge(resource.Default(), r)
 	}
@@ -108,7 +109,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 	defer cancel()
 
 	lg.Info("Starting")
-	res, err := opts.resourceFn(ctx)
+	res, err := opts.resourceFn(ctx, lg)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get resource: %v", err))
 	}
