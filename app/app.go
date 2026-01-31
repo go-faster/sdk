@@ -13,13 +13,14 @@ import (
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/go-faster/errors"
-	"github.com/go-faster/sdk/internal/zapencoder"
 	slogzap "github.com/samber/slog-zap/v2"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/go-faster/sdk/internal/zapencoder"
 
 	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/zctx"
@@ -53,10 +54,10 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 			resource.WithProcessRuntimeVersion(),
 			resource.WithProcessRuntimeName(),
 			resource.WithOS(),
-			resource.WithFromEnv(),
 			resource.WithTelemetrySDK(),
 			resource.WithHost(),
 			resource.WithProcess(),
+			resource.WithFromEnv(),
 		},
 	}
 	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
