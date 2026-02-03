@@ -23,7 +23,7 @@ type options struct {
 	tracerOptions   []autotracer.Option
 	loggerOptions   []autologs.Option
 	resourceOptions []resource.Option
-	resourceFn      func(ctx context.Context, lg *zap.Logger) (*resource.Resource, error)
+	resourceFn      func(ctx context.Context) (*resource.Resource, error)
 }
 
 func (o *options) modifyZapConfig(cb func(*zap.Config)) {
@@ -137,7 +137,7 @@ func WithContext(ctx context.Context) Option {
 // WithResource sets the function that will be called to retrieve telemetry resource for application.
 //
 // Defaults to function that enables most common resource detectors.
-func WithResource(fn func(ctx context.Context, lg *zap.Logger) (*resource.Resource, error)) Option {
+func WithResource(fn func(ctx context.Context) (*resource.Resource, error)) Option {
 	return optionFunc(func(o *options) {
 		o.resourceFn = fn
 	})
