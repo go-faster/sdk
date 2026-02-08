@@ -26,7 +26,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autopyro"
 	"github.com/go-faster/sdk/autotracer"
@@ -207,7 +206,6 @@ func newTelemetry(
 	res *resource.Resource,
 	meterOptions []autometer.Option,
 	tracerOptions []autotracer.Option,
-	logsOptions []autologs.Option,
 ) (*Telemetry, error) {
 	{
 		// Setup global OTEL logger and error handler.
@@ -223,18 +221,6 @@ func newTelemetry(
 		baseContext:     baseCtx,
 	}
 	ctx := baseCtx
-	{
-		provider, stop, err := autologs.NewLoggerProvider(ctx,
-			include(logsOptions,
-				autologs.WithResource(res),
-			)...,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "logger provider")
-		}
-		m.loggerProvider = provider
-		m.registerShutdown("logger", stop)
-	}
 	{
 		provider, stop, err := autotracer.NewTracerProvider(ctx,
 			include(tracerOptions,

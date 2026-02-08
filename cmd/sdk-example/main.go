@@ -4,34 +4,21 @@ import (
 	"context"
 	"io"
 
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/go-faster/sdk/app"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autotracer"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.uber.org/zap"
 )
 
 func main() {
 	app.Run(func(ctx context.Context, lg *zap.Logger, t *app.Telemetry) error {
 		lg.Info("Hello, world!")
+		lg.Debug("Some debug")
 		<-t.ShutdownContext().Done()
 		lg.Info("Goodbye, world!")
 		return nil
 	},
-		// Configure custom zap config.
-		app.WithZapTee(false),
-		app.WithZapConfig(zap.NewDevelopmentConfig()),
-		app.WithZapOptions(
-			// Custom zap logger options.
-			// E.g. hooks, custom core.
-			zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-				return zapcore.NewTee(core)
-			}),
-		),
-		app.WithoutZapOpenTelemetry(),
-
 		// Redirect metrics and traces to /dev/null.
 		app.WithMeterOptions(autometer.WithWriter(io.Discard)),
 		app.WithTracerOptions(autotracer.WithWriter(io.Discard)),

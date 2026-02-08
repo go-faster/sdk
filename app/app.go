@@ -20,9 +20,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/go-faster/sdk/internal/zapencoder"
-
-	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/zctx"
 )
 
@@ -37,6 +34,12 @@ const (
 	watchdogTimeout = shutdownTimeout + time.Second*5
 )
 
+func defaultZapConfig() zap.Config {
+	cfg := zap.NewProductionConfig()
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	return cfg
+}
+
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
@@ -45,9 +48,7 @@ const (
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: zap.NewProductionConfig(),
-		zapTee:    true,
-		otelZap:   true,
+		zapConfig: defaultZapConfig(),
 		ctx:       context.Background(),
 		resourceOptions: []resource.Option{
 			resource.WithProcessRuntimeDescription(),
@@ -67,18 +68,11 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		}
 		return resource.Merge(resource.Default(), r)
 	}
-	if v, err := strconv.ParseBool(os.Getenv("OTEL_ZAP_TEE")); err == nil {
-		// Override default.
-		opts.zapTee = v
-	}
 	for _, o := range op {
 		o.apply(&opts)
 	}
 
 	ctx := opts.ctx
-	if opts.otelZap {
-		ctx = zctx.WithOpenTelemetryZap(ctx)
-	}
 	ctx, baseCtxCancel := context.WithCancel(ctx)
 	defer baseCtxCancel()
 
@@ -90,11 +84,6 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		}
 		opts.modifyZapConfig(func(c *zap.Config) {
 			c.Level.SetLevel(lvl)
-		})
-	}
-	if opts.otelZap {
-		opts.modifyZapConfig(func(c *zap.Config) {
-			c.EncoderConfig.NewReflectedEncoder = zapencoder.NewReflectedEncoder
 		})
 	}
 
@@ -117,15 +106,10 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		ctx, shutdownCtx,
 		lg.Named("metrics"),
 		res,
-		opts.meterOptions, opts.tracerOptions, opts.loggerOptions,
+		opts.meterOptions, opts.tracerOptions,
 	)
 	if err != nil {
 		panic(err)
-	}
-
-	// Setup logs.
-	if ctx, err = autologs.Setup(ctx, m.LoggerProvider(), opts.zapTee); err != nil {
-		panic(fmt.Sprintf("failed to setup logs: %v", err))
 	}
 
 	shutdownCtx = zctx.Base(shutdownCtx, zctx.From(ctx))
