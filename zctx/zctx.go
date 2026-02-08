@@ -24,19 +24,12 @@ type logger struct {
 	ctx  context.Context
 }
 
-func (l *logger) SetSpan(ctx context.Context, s trace.SpanContext) {
+func (l *logger) SetSpan(s trace.SpanContext) {
 	l.span = s
-	if ctx.Value(otelzapKey{}) != nil {
-		l.ctx = ctx
-		l.lg = l.base.With(
-			zap.Reflect("ctx", ctx),
-		)
-	} else {
-		l.lg = l.base.With(
-			zap.String("span_id", s.SpanID().String()),
-			zap.String("trace_id", s.TraceID().String()),
-		)
-	}
+	l.lg = l.base.With(
+		zap.String("span_id", s.SpanID().String()),
+		zap.String("trace_id", s.TraceID().String()),
+	)
 }
 
 func from(ctx context.Context) logger {
@@ -61,7 +54,7 @@ func Start(ctx context.Context) (context.Context, *zap.Logger) {
 		return ctx, v.lg
 	}
 
-	v.SetSpan(ctx, s)
+	v.SetSpan(s)
 	return context.WithValue(ctx, key{}, v), v.lg
 }
 
@@ -75,7 +68,7 @@ func From(ctx context.Context) *zap.Logger {
 	if !s.IsValid() {
 		return v.base
 	}
-	v.SetSpan(ctx, s)
+	v.SetSpan(s)
 	return v.lg
 }
 
@@ -101,7 +94,7 @@ func With(ctx context.Context, fields ...zap.Field) context.Context {
 		//
 		// Next call to From in same span
 		// will return cached logger.
-		v.SetSpan(ctx, s)
+		v.SetSpan(s)
 	} else {
 		// Not in span anymore.
 		v.lg = v.base
@@ -120,12 +113,4 @@ func Base(ctx context.Context, lg *zap.Logger) context.Context {
 		lg = _nop
 	}
 	return with(ctx, logger{base: lg})
-}
-
-type otelzapKey struct{}
-
-// WithOpenTelemetryZap enables otelzap mode, disabling writing span and trace IDs to logs and
-// adding ctx as a log field instead.
-func WithOpenTelemetryZap(ctx context.Context) context.Context {
-	return context.WithValue(ctx, otelzapKey{}, struct{}{})
 }
