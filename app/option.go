@@ -7,6 +7,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
 
+	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autotracer"
 )
@@ -14,10 +15,13 @@ import (
 type options struct {
 	zapConfig  zap.Config
 	zapOptions []zap.Option
+	zapTee     bool
+	otelZap    bool
 	ctx        context.Context
 
 	meterOptions    []autometer.Option
 	tracerOptions   []autotracer.Option
+	loggerOptions   []autologs.Option
 	resourceOptions []resource.Option
 	resourceFn      func(ctx context.Context) (*resource.Resource, error)
 }
@@ -46,6 +50,13 @@ type Option interface {
 	apply(o *options)
 }
 
+// WithZapTee sets option to tee zap logs to stderr.
+func WithZapTee(teeToStderr bool) Option {
+	return optionFunc(func(o *options) {
+		o.zapTee = teeToStderr
+	})
+}
+
 // WithZapConfig sets the default zap config for the application.
 func WithZapConfig(cfg zap.Config) Option {
 	return optionFunc(func(o *options) {
@@ -59,6 +70,23 @@ func WithZapConfig(cfg zap.Config) Option {
 func WithZapOptions(opts ...zap.Option) Option {
 	return optionFunc(func(o *options) {
 		o.zapOptions = opts
+	})
+}
+
+// WithZapOpenTelemetry enabels OpenTelemetry mode for zap.
+// See [zctx.WithOpenTelemetryZap].
+//
+// Deprecated: enabled by default.
+func WithZapOpenTelemetry() Option {
+	return optionFunc(func(o *options) {
+		o.otelZap = true
+	})
+}
+
+// WithoutZapOpenTelemetry disables OpenTelemetry mode for zap.
+func WithoutZapOpenTelemetry() Option {
+	return optionFunc(func(o *options) {
+		o.otelZap = false
 	})
 }
 
