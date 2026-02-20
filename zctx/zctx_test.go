@@ -214,3 +214,54 @@ func (c SpanCompare) Equal(sc trace.SpanContext) bool {
 	}
 	return true
 }
+
+func TestOpenTelemetyZap(t *testing.T) {
+	obs, logs := observer.New(zap.DebugLevel)
+	assertEmpty(t, logs)
+
+	assert.NoError(t, obs.Sync(), "Unexpected failure in no-op Sync")
+
+	lg := zap.New(obs).With(zap.Int("i", 1))
+
+	ctx := Base(context.Background(), lg)
+	ctx = WithOpenTelemetryZap(ctx)
+	ctx = With(ctx, zap.Int("j", 2))
+
+	tracer := newTestTracer()
+	do(ctx, tracer, 3)
+	want := []observer.LoggedEntry{
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 3),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "aa1a08609e5aacf2"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 2),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "572a3c21b660fc50"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 1),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "07b95cb1be0ea6cd"),
+			},
+		},
+		{
+			Entry: zapcore.Entry{Level: zap.InfoLevel, Message: "do"},
+			Context: []zapcore.Field{
+				zap.Int("depth", 4),
+				zap.Int("i", 1), zap.Int("j", 2),
+				newSpanComparator("47058b76ab7d2a10a2ef6534312d205a", "6f539157d0433b08"),
+			},
+		},
+	}
+	assertEntries(t, logs, want...)
+}
