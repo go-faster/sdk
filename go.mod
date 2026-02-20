@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/go-faster/errors v0.7.1
+	github.com/go-faster/jx v1.2.0
 	github.com/go-logr/zapr v1.3.0
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.2.7
@@ -12,19 +13,24 @@ require (
 	github.com/samber/slog-zap/v2 v2.6.3
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/collector/pdata v1.52.0
+	go.opentelemetry.io/contrib/bridges/otelzap v0.15.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.65.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.65.0
 	go.opentelemetry.io/otel v1.40.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.16.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.40.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.62.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.16.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.40.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.40.0
 	go.opentelemetry.io/otel/log v0.16.0
 	go.opentelemetry.io/otel/metric v1.40.0
 	go.opentelemetry.io/otel/sdk v1.40.0
+	go.opentelemetry.io/otel/sdk/log v0.16.0
 	go.opentelemetry.io/otel/sdk/metric v1.40.0
 	go.opentelemetry.io/otel/trace v1.40.0
 	go.uber.org/automaxprocs v1.6.0
@@ -57,6 +63,7 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/samber/lo v1.52.0 // indirect
 	github.com/samber/slog-common v0.20.0 // indirect
+	github.com/segmentio/asm v1.2.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.52.0 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.40.0 // indirect
