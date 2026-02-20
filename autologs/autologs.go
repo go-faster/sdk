@@ -149,10 +149,7 @@ type levelFilterProcessor struct {
 	severity log.Severity
 }
 
-var (
-	_ sdklog.FilterProcessor = (*levelFilterProcessor)(nil)
-	_ sdklog.Processor       = (*levelFilterProcessor)(nil)
-)
+var _ sdklog.Processor = (*levelFilterProcessor)(nil)
 
 // Enabled implements [sdklog.FilterProcessor].
 func (l *levelFilterProcessor) Enabled(ctx context.Context, param sdklog.EnabledParameters) bool {
