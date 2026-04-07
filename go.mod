@@ -13,9 +13,9 @@ require (
 	github.com/samber/slog-zap/v2 v2.6.4
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/collector/pdata v1.55.0
-	go.opentelemetry.io/contrib/bridges/otelzap v0.17.0
-	go.opentelemetry.io/contrib/instrumentation/runtime v0.67.0
-	go.opentelemetry.io/contrib/propagators/autoprop v0.67.0
+	go.opentelemetry.io/contrib/bridges/otelzap v0.18.0
+	go.opentelemetry.io/contrib/instrumentation/runtime v0.68.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.68.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.19.0
@@ -66,10 +66,10 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.55.0 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.42.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.42.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.42.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.42.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.43.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.43.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.43.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
