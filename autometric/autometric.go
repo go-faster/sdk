@@ -54,17 +54,27 @@ func fieldName(prefix string, sf reflect.StructField) string {
 
 // Init initialize metrics in given struct s using given meter.
 func Init(m metric.Meter, s any, opts InitOptions) error {
+	return walkStruct(m, s, opts, func(field reflect.Value, mt any) {
+		if !field.CanSet() {
+			return
+		}
+		field.Set(reflect.ValueOf(mt))
+	})
+}
+
+func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.Value, mt any)) error {
 	opts.setDefaults()
 
 	ptr := reflect.ValueOf(s)
-	if !isValidPtrStruct(ptr) {
+	if ptr.Kind() != reflect.Pointer || ptr.Elem().Kind() != reflect.Struct {
+		if ptr.Kind() == reflect.Pointer && ptr.IsNil() {
+			return errors.Errorf("a pointer-to-struct expected, got (%T)(nil)", s)
+		}
 		return errors.Errorf("a pointer-to-struct expected, got %T", s)
 	}
 
-	var (
-		struct_    = ptr.Elem()
-		structType = struct_.Type()
-	)
+	struct_ := ptr.Elem()
+	structType := struct_.Type()
 	for i := 0; i < struct_.NumField(); i++ {
 		fieldType := structType.Field(i)
 		if fieldType.Anonymous || !fieldType.IsExported() {
@@ -73,17 +83,13 @@ func Init(m metric.Meter, s any, opts InitOptions) error {
 		if n, ok := fieldType.Tag.Lookup("autometric"); ok && n == "-" {
 			continue
 		}
-
 		field := struct_.Field(i)
-		if !field.CanSet() {
-			continue
-		}
 
 		mt, err := makeField(m, fieldType, opts)
 		if err != nil {
 			return errors.Wrapf(err, "field (%s).%s", structType, fieldType.Name)
 		}
-		field.Set(reflect.ValueOf(mt))
+		fn(field, mt)
 	}
 
 	return nil
@@ -166,9 +172,4 @@ func makeField(m metric.Meter, sf reflect.StructField, opts InitOptions) (any, e
 	default:
 		return nil, errors.Errorf("unexpected type %v", ftyp)
 	}
-}
-
-func isValidPtrStruct(ptr reflect.Value) bool {
-	return ptr.Kind() == reflect.Pointer &&
-		ptr.Elem().Kind() == reflect.Struct
 }

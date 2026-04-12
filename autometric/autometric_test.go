@@ -121,6 +121,9 @@ func TestInit(t *testing.T) {
 func TestInitErrors(t *testing.T) {
 	type (
 		JustStruct struct{}
+		FineStruct struct {
+			Int64Counter metric.Int64Counter
+		}
 
 		UnexpectedType struct {
 			Foo metric.Observable
@@ -150,6 +153,7 @@ func TestInitErrors(t *testing.T) {
 	}{
 		{0, "a pointer-to-struct expected, got int"},
 		{JustStruct{}, "a pointer-to-struct expected, got autometric.JustStruct"},
+		{(*FineStruct)(nil), "a pointer-to-struct expected, got (*autometric.FineStruct)(nil)"},
 
 		{&UnexpectedType{}, "field (autometric.UnexpectedType).Foo: unexpected type metric.Observable"},
 		{&UnsupportedInt64Observable{}, "field (autometric.UnsupportedInt64Observable).Observable: observables are not supported"},

@@ -1,0 +1,25 @@
+groups:
+    -   id: metric.client.http.inflight_requests
+        type: metric
+        instrument: updowncounter
+        brief: Number of inflight requests
+        metric_name: client.http.inflight_requests
+        unit: '{requests}'
+    -   id: metric.client.http.memory_usage
+        type: metric
+        instrument: gauge
+        brief: Memory usage
+        metric_name: client.http.memory_usage
+        unit: Bytes
+    -   id: metric.inserted_bytes
+        type: metric
+        instrument: counter
+        brief: Total number of inserted bytes by signal
+        metric_name: inserted_bytes
+        unit: By
+    -   id: metric.logs.inserted_records
+        type: metric
+        instrument: counter
+        brief: Number of inserted log records
+        metric_name: logs.inserted_records
+        unit: '{records}'
