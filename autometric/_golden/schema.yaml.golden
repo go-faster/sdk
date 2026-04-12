@@ -1,0 +1,49 @@
+groups:
+    -   id: metric.float64counter
+        type: metric
+        instrument: counter
+        brief: Float64Counter test metric
+        metric_name: float64counter
+        unit: Float64Counter units
+    -   id: metric.float64gauge
+        type: metric
+        instrument: gauge
+        brief: Float64Gauge test metric
+        metric_name: float64gauge
+        unit: Float64Gauge units
+    -   id: metric.float64histogram
+        type: metric
+        instrument: histogram
+        brief: Float64Histogram test metric
+        metric_name: float64histogram
+        unit: Float64Histogram units
+    -   id: metric.float64updowncounter
+        type: metric
+        instrument: updowncounter
+        brief: Float64UpDownCounter test metric
+        metric_name: float64updowncounter
+        unit: Float64UpDownCounter units
+    -   id: metric.int64counter
+        type: metric
+        instrument: counter
+        brief: Int64Counter test metric
+        metric_name: int64counter
+        unit: Int64Counter units
+    -   id: metric.int64gauge
+        type: metric
+        instrument: gauge
+        brief: Int64Gauge test metric
+        metric_name: int64gauge
+        unit: Int64Gauge units
+    -   id: metric.int64histogram
+        type: metric
+        instrument: histogram
+        brief: Int64Histogram test metric
+        metric_name: int64histogram
+        unit: Int64Histogram units
+    -   id: metric.int64updowncounter
+        type: metric
+        instrument: updowncounter
+        brief: Int64UpDownCounter test metric
+        metric_name: int64updowncounter
+        unit: Int64UpDownCounter units
