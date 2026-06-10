@@ -8,7 +8,7 @@ require (
 	github.com/go-faster/jx v1.2.0
 	github.com/go-faster/yaml v0.4.6
 	github.com/go-logr/zapr v1.3.0
-	github.com/grafana/otel-profiling-go v0.5.1
+	github.com/grafana/otel-profiling-go v0.5.3
 	github.com/grafana/pyroscope-go v1.3.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/samber/slog-zap/v2 v2.7.0
