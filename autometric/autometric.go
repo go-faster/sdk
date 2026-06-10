@@ -11,23 +11,23 @@ import (
 )
 
 var (
-	int64CounterType                 = reflect.TypeOf(new(metric.Int64Counter)).Elem()
-	int64UpDownCounterType           = reflect.TypeOf(new(metric.Int64UpDownCounter)).Elem()
-	int64HistogramType               = reflect.TypeOf(new(metric.Int64Histogram)).Elem()
-	int64GaugeType                   = reflect.TypeOf(new(metric.Int64Gauge)).Elem()
-	int64ObservableCounterType       = reflect.TypeOf(new(metric.Int64ObservableCounter)).Elem()
-	int64ObservableUpDownCounterType = reflect.TypeOf(new(metric.Int64ObservableUpDownCounter)).Elem()
-	int64ObservableGaugeType         = reflect.TypeOf(new(metric.Int64ObservableGauge)).Elem()
+	int64CounterType                 = reflect.TypeFor[metric.Int64Counter]()
+	int64UpDownCounterType           = reflect.TypeFor[metric.Int64UpDownCounter]()
+	int64HistogramType               = reflect.TypeFor[metric.Int64Histogram]()
+	int64GaugeType                   = reflect.TypeFor[metric.Int64Gauge]()
+	int64ObservableCounterType       = reflect.TypeFor[metric.Int64ObservableCounter]()
+	int64ObservableUpDownCounterType = reflect.TypeFor[metric.Int64ObservableUpDownCounter]()
+	int64ObservableGaugeType         = reflect.TypeFor[metric.Int64ObservableGauge]()
 )
 
 var (
-	float64CounterType                 = reflect.TypeOf(new(metric.Float64Counter)).Elem()
-	float64UpDownCounterType           = reflect.TypeOf(new(metric.Float64UpDownCounter)).Elem()
-	float64HistogramType               = reflect.TypeOf(new(metric.Float64Histogram)).Elem()
-	float64GaugeType                   = reflect.TypeOf(new(metric.Float64Gauge)).Elem()
-	float64ObservableCounterType       = reflect.TypeOf(new(metric.Float64ObservableCounter)).Elem()
-	float64ObservableUpDownCounterType = reflect.TypeOf(new(metric.Float64ObservableUpDownCounter)).Elem()
-	float64ObservableGaugeType         = reflect.TypeOf(new(metric.Float64ObservableGauge)).Elem()
+	float64CounterType                 = reflect.TypeFor[metric.Float64Counter]()
+	float64UpDownCounterType           = reflect.TypeFor[metric.Float64UpDownCounter]()
+	float64HistogramType               = reflect.TypeFor[metric.Float64Histogram]()
+	float64GaugeType                   = reflect.TypeFor[metric.Float64Gauge]()
+	float64ObservableCounterType       = reflect.TypeFor[metric.Float64ObservableCounter]()
+	float64ObservableUpDownCounterType = reflect.TypeFor[metric.Float64ObservableUpDownCounter]()
+	float64ObservableGaugeType         = reflect.TypeFor[metric.Float64ObservableGauge]()
 )
 
 // InitOptions defines options for [Init].
@@ -54,17 +54,27 @@ func fieldName(prefix string, sf reflect.StructField) string {
 
 // Init initialize metrics in given struct s using given meter.
 func Init(m metric.Meter, s any, opts InitOptions) error {
+	return walkStruct(m, s, opts, func(field reflect.Value, mt any) {
+		if !field.CanSet() {
+			return
+		}
+		field.Set(reflect.ValueOf(mt))
+	})
+}
+
+func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.Value, mt any)) error {
 	opts.setDefaults()
 
 	ptr := reflect.ValueOf(s)
-	if !isValidPtrStruct(ptr) {
+	if ptr.Kind() != reflect.Pointer || ptr.Elem().Kind() != reflect.Struct {
+		if ptr.Kind() == reflect.Pointer && ptr.IsNil() {
+			return errors.Errorf("a pointer-to-struct expected, got (%T)(nil)", s)
+		}
 		return errors.Errorf("a pointer-to-struct expected, got %T", s)
 	}
 
-	var (
-		struct_    = ptr.Elem()
-		structType = struct_.Type()
-	)
+	struct_ := ptr.Elem()
+	structType := struct_.Type()
 	for i := 0; i < struct_.NumField(); i++ {
 		fieldType := structType.Field(i)
 		if fieldType.Anonymous || !fieldType.IsExported() {
@@ -73,17 +83,13 @@ func Init(m metric.Meter, s any, opts InitOptions) error {
 		if n, ok := fieldType.Tag.Lookup("autometric"); ok && n == "-" {
 			continue
 		}
-
 		field := struct_.Field(i)
-		if !field.CanSet() {
-			continue
-		}
 
 		mt, err := makeField(m, fieldType, opts)
 		if err != nil {
 			return errors.Wrapf(err, "field (%s).%s", structType, fieldType.Name)
 		}
-		field.Set(reflect.ValueOf(mt))
+		fn(field, mt)
 	}
 
 	return nil
@@ -102,7 +108,7 @@ func makeField(m metric.Meter, sf reflect.StructField, opts InitOptions) (any, e
 		default:
 			return nil, errors.Errorf("boundaries tag should be used only on histogram metrics: got %v", ftyp)
 		}
-		for _, val := range strings.Split(b, ",") {
+		for val := range strings.SplitSeq(b, ",") {
 			f, err := strconv.ParseFloat(val, 64)
 			if err != nil {
 				return nil, errors.Wrap(err, "parse boundaries")
@@ -166,9 +172,4 @@ func makeField(m metric.Meter, sf reflect.StructField, opts InitOptions) (any, e
 	default:
 		return nil, errors.Errorf("unexpected type %v", ftyp)
 	}
-}
-
-func isValidPtrStruct(ptr reflect.Value) bool {
-	return ptr.Kind() == reflect.Pointer &&
-		ptr.Elem().Kind() == reflect.Struct
 }

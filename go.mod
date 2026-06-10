@@ -6,6 +6,7 @@ require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.2.0
+	github.com/go-faster/yaml v0.4.6
 	github.com/go-logr/zapr v1.3.0
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.2.8
