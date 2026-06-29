@@ -32,7 +32,10 @@ var (
 	float64ObservableGaugeType         = reflect.TypeFor[metric.Float64ObservableGauge]()
 )
 
-var syncGaugeInt64Type = reflect.TypeFor[*otelsync.GaugeInt64]()
+var (
+	syncGaugeInt64Type   = reflect.TypeFor[*otelsync.GaugeInt64]()
+	syncGaugeFloat64Type = reflect.TypeFor[*otelsync.GaugeFloat64]()
+)
 
 // InitOptions defines options for [Init].
 type InitOptions struct {
@@ -95,7 +98,8 @@ func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.V
 			mt  any
 			err error
 		)
-		if fieldType.Type == syncGaugeInt64Type {
+		switch fieldType.Type {
+		case syncGaugeInt64Type:
 			if adapter == nil {
 				adapter = otelsync.NewAdapter(m)
 			}
@@ -108,7 +112,20 @@ func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.V
 			if err == nil {
 				mt = observer.(*otelsync.GaugeInt64)
 			}
-		} else {
+		case syncGaugeFloat64Type:
+			if adapter == nil {
+				adapter = otelsync.NewAdapter(m)
+			}
+			var observer metric.Float64Observer
+			observer, err = adapter.GaugeFloat64(
+				opts.FieldName(opts.Prefix, fieldType),
+				metric.WithUnit(fieldType.Tag.Get("unit")),
+				metric.WithDescription(fieldType.Tag.Get("description")),
+			)
+			if err == nil {
+				mt = observer.(*otelsync.GaugeFloat64)
+			}
+		default:
 			mt, err = makeField(m, fieldType, opts)
 		}
 		if err != nil {

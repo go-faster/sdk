@@ -125,18 +125,14 @@ func TestSchemaStability(t *testing.T) {
 
 func TestSchemaSyncGauge(t *testing.T) {
 	var stats struct {
-		ActiveConns *otelsync.GaugeInt64 `name:"active_connections" description:"Active connections" unit:"{connections}"`
+		ActiveConns  *otelsync.GaugeInt64   `name:"active_connections" description:"Active connections" unit:"{connections}"`
+		MemUsageFrac *otelsync.GaugeFloat64 `name:"mem_usage_frac" description:"Memory usage fraction" unit:"1"`
 	}
 	infos, err := Schema(&stats, InitOptions{})
 	require.NoError(t, err)
-	require.Equal(t, []MetricInfo{
-		{
-			Type:        "gauge",
-			Instrument:  "gauge",
-			Name:        "active_connections",
-			Description: "Active connections",
-			Unit:        "{connections}",
-		},
+	require.ElementsMatch(t, []MetricInfo{
+		{Type: "gauge", Instrument: "gauge", Name: "active_connections", Description: "Active connections", Unit: "{connections}"},
+		{Type: "gauge", Instrument: "gauge", Name: "mem_usage_frac", Description: "Memory usage fraction", Unit: "1"},
 	}, infos.Metrics)
 }
 

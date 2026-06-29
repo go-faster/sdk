@@ -152,6 +152,38 @@ func TestInitSyncGauge(t *testing.T) {
 	require.Equal(t, int64(42), gauge.DataPoints[0].Value)
 }
 
+func TestInitSyncGaugeFloat64(t *testing.T) {
+	ctx := context.Background()
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	meter := mp.Meter("test-meter")
+
+	var test struct {
+		SyncGauge *otelsync.GaugeFloat64 `name:"sync_gauge" description:"a float64 sync gauge" unit:"By"`
+	}
+	require.NoError(t, Init(meter, &test, InitOptions{Prefix: "test."}))
+	require.NotNil(t, test.SyncGauge)
+
+	test.SyncGauge.Observe(3.14)
+
+	require.NoError(t, mp.ForceFlush(ctx))
+	var data metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &data))
+
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	m := data.ScopeMetrics[0].Metrics[0]
+	require.Equal(t, "test.sync_gauge", m.Name)
+	require.Equal(t, "a float64 sync gauge", m.Description)
+	require.Equal(t, "By", m.Unit)
+
+	gauge, ok := m.Data.(metricdata.Gauge[float64])
+	require.True(t, ok)
+	require.Len(t, gauge.DataPoints, 1)
+	require.InDelta(t, 3.14, gauge.DataPoints[0].Value, 1e-9)
+}
+
 func TestInitErrors(t *testing.T) {
 	type (
 		JustStruct struct{}
