@@ -136,6 +136,26 @@ func TestSchemaSyncGauge(t *testing.T) {
 	}, infos.Metrics)
 }
 
+func TestRegisterMetricInfo(t *testing.T) {
+	oldRegistry := globalRegistry
+	t.Cleanup(func() { globalRegistry = oldRegistry })
+	globalRegistry = &Registry{}
+
+	RegisterMetricInfo(
+		MetricInfo{Type: "sum", Instrument: "counter", Name: "direct.counter", Description: "Direct counter", Unit: "1"},
+		MetricInfo{Type: "gauge", Instrument: "gauge", Name: "direct.gauge", Description: "Direct gauge", Unit: "By"},
+	)
+
+	require.ElementsMatch(t, []MetricInfo{
+		{Type: "sum", Instrument: "counter", Name: "direct.counter", Description: "Direct counter", Unit: "1"},
+		{Type: "gauge", Instrument: "gauge", Name: "direct.gauge", Description: "Direct gauge", Unit: "By"},
+	}, Collect())
+
+	require.Panics(t, func() {
+		RegisterMetricInfo(MetricInfo{Name: "direct.counter"})
+	})
+}
+
 func TestRegistryYAML(t *testing.T) {
 	oldRegisty := globalRegistry
 	t.Cleanup(func() {
