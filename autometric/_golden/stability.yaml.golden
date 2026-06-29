@@ -1,0 +1,18 @@
+groups:
+    -   id: metric.exp_counter
+        type: metric
+        instrument: counter
+        brief: Experimental counter
+        metric_name: exp_counter
+        stability: experimental
+    -   id: metric.plain_counter
+        type: metric
+        instrument: counter
+        brief: Plain counter
+        metric_name: plain_counter
+    -   id: metric.stable_counter
+        type: metric
+        instrument: counter
+        brief: Stable counter
+        metric_name: stable_counter
+        stability: stable

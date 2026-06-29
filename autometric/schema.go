@@ -77,14 +77,18 @@ var globalRegistry = &Registry{}
 //
 // Register panics if schema registration fails. Use [Collect] to get all registered schemas.
 // Returns function that initializes metrics of type T with given meter and options.
-func Register[T any](s T, opts InitOptions) func(metric.Meter) (T, error) {
+func Register(s any, opts InitOptions) {
 	if err := globalRegistry.Register(s, opts); err != nil {
 		panic(err)
 	}
-	return func(m metric.Meter) (T, error) {
-		var t T
-		err := Init(m, &t, opts)
-		return t, err
+}
+
+// RegisterMetricInfo registers given metrics directly in the global registry.
+//
+// RegisterMetricInfo panics if registration fails (e.g. name conflict).
+func RegisterMetricInfo(metrics ...MetricInfo) {
+	if err := globalRegistry.RegisterMetrics(metrics); err != nil {
+		panic(err)
 	}
 }
 
@@ -101,12 +105,10 @@ func WeaverYAML() []byte {
 // Define registers schema for struct of type T with given options and returns function that
 // initializes metrics of type T with given meter and options.
 func Define[T any](opts InitOptions) func(meter metric.Meter) (T, error) {
-	{
-		t := new(T)
-		Register(t, opts)
-	}
-	return func(meter metric.Meter) (t T, err error) {
-		err = Init(meter, &t, opts)
+	Register(new(T), opts)
+	return func(m metric.Meter) (T, error) {
+		var t T
+		err := Init(m, &t, opts)
 		return t, err
 	}
 }
@@ -140,6 +142,7 @@ type MetricInfo struct {
 	Name        string
 	Description string
 	Unit        string
+	Stability   string
 }
 
 func (m MetricInfo) toGroup() weaveryaml.Group {
@@ -150,6 +153,7 @@ func (m MetricInfo) toGroup() weaveryaml.Group {
 		MetricName: m.Name,
 		Brief:      m.Description,
 		Unit:       m.Unit,
+		Stability:  m.Stability,
 	}
 }
 
@@ -159,7 +163,11 @@ func Schema(s any, opts InitOptions) (sch MetricSchema, err error) {
 	d := &descriptionCollectorMeter{
 		Meter: metricnoop.NewMeterProvider().Meter("github.com/go-faster/autometric.Schema"),
 	}
-	if err := walkStruct(d, s, opts, func(reflect.Value, any) {}); err != nil {
+	if err := walkStruct(d, s, opts, func(_ reflect.Value, sf reflect.StructField, _ any) {
+		if len(d.infos) > 0 {
+			d.infos[len(d.infos)-1].Stability = sf.Tag.Get("stability")
+		}
+	}); err != nil {
 		return sch, errors.Wrapf(err, "get schema from struct %T", s)
 	}
 	slices.SortFunc(d.infos, func(a, b MetricInfo) int {

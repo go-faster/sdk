@@ -10,6 +10,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
+	"github.com/go-faster/sdk/otelsync"
 )
 
 func TestInit(t *testing.T) {
@@ -116,6 +118,38 @@ func TestInit(t *testing.T) {
 		},
 		infos,
 	)
+}
+
+func TestInitSyncGauge(t *testing.T) {
+	ctx := context.Background()
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	meter := mp.Meter("test-meter")
+
+	var test struct {
+		SyncGauge *otelsync.GaugeInt64 `name:"sync_gauge" description:"a sync gauge" unit:"By"`
+	}
+	require.NoError(t, Init(meter, &test, InitOptions{Prefix: "test."}))
+	require.NotNil(t, test.SyncGauge)
+
+	test.SyncGauge.Observe(42)
+
+	require.NoError(t, mp.ForceFlush(ctx))
+	var data metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &data))
+
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	m := data.ScopeMetrics[0].Metrics[0]
+	require.Equal(t, "test.sync_gauge", m.Name)
+	require.Equal(t, "a sync gauge", m.Description)
+	require.Equal(t, "By", m.Unit)
+
+	gauge, ok := m.Data.(metricdata.Gauge[int64])
+	require.True(t, ok)
+	require.Len(t, gauge.DataPoints, 1)
+	require.Equal(t, int64(42), gauge.DataPoints[0].Value)
 }
 
 func TestInitErrors(t *testing.T) {

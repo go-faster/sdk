@@ -10,6 +10,7 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/go-faster/sdk/gold"
+	"github.com/go-faster/sdk/otelsync"
 )
 
 func TestMain(m *testing.M) {
@@ -97,6 +98,46 @@ type a2Stats struct {
 type dupStats struct {
 	InsertedRecords metric.Int64Counter   `name:"logs.inserted_records" description:"Number of inserted log records" unit:"{records}"`
 	RequestLatency  metric.Int64Histogram `name:"http.request_latency" description:"Latency of requests" unit:"ms"`
+}
+
+type stabilityStats struct {
+	Stable       metric.Int64Counter   `name:"stable_counter" description:"Stable counter" stability:"stable"`
+	Experimental metric.Int64Counter   `name:"exp_counter" description:"Experimental counter" stability:"experimental"`
+	NoStability  metric.Float64Counter `name:"plain_counter" description:"Plain counter"`
+}
+
+func TestSchemaStability(t *testing.T) {
+	var stats stabilityStats
+	infos, err := Schema(&stats, InitOptions{})
+	require.NoError(t, err)
+
+	byName := map[string]MetricInfo{}
+	for _, m := range infos.Metrics {
+		byName[m.Name] = m
+	}
+
+	require.Equal(t, "stable", byName["stable_counter"].Stability)
+	require.Equal(t, "experimental", byName["exp_counter"].Stability)
+	require.Equal(t, "", byName["plain_counter"].Stability)
+
+	gold.Str(t, string(infos.WeaverYAML()), "stability.yaml.golden")
+}
+
+func TestSchemaSyncGauge(t *testing.T) {
+	var stats struct {
+		ActiveConns *otelsync.GaugeInt64 `name:"active_connections" description:"Active connections" unit:"{connections}"`
+	}
+	infos, err := Schema(&stats, InitOptions{})
+	require.NoError(t, err)
+	require.Equal(t, []MetricInfo{
+		{
+			Type:        "gauge",
+			Instrument:  "gauge",
+			Name:        "active_connections",
+			Description: "Active connections",
+			Unit:        "{connections}",
+		},
+	}, infos.Metrics)
 }
 
 func TestRegistryYAML(t *testing.T) {

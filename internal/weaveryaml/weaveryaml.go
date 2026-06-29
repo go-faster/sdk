@@ -14,4 +14,5 @@ type Group struct {
 	Brief      string `yaml:"brief,omitempty"`
 	MetricName string `yaml:"metric_name,omitempty"`
 	Unit       string `yaml:"unit,omitempty"`
+	Stability  string `yaml:"stability,omitempty"`
 }

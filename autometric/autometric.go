@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/go-faster/sdk/otelsync"
 )
 
 var (
@@ -29,6 +31,8 @@ var (
 	float64ObservableUpDownCounterType = reflect.TypeFor[metric.Float64ObservableUpDownCounter]()
 	float64ObservableGaugeType         = reflect.TypeFor[metric.Float64ObservableGauge]()
 )
+
+var syncGaugeInt64Type = reflect.TypeFor[*otelsync.GaugeInt64]()
 
 // InitOptions defines options for [Init].
 type InitOptions struct {
@@ -54,7 +58,7 @@ func fieldName(prefix string, sf reflect.StructField) string {
 
 // Init initialize metrics in given struct s using given meter.
 func Init(m metric.Meter, s any, opts InitOptions) error {
-	return walkStruct(m, s, opts, func(field reflect.Value, mt any) {
+	return walkStruct(m, s, opts, func(field reflect.Value, _ reflect.StructField, mt any) {
 		if !field.CanSet() {
 			return
 		}
@@ -62,7 +66,7 @@ func Init(m metric.Meter, s any, opts InitOptions) error {
 	})
 }
 
-func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.Value, mt any)) error {
+func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.Value, sf reflect.StructField, mt any)) error {
 	opts.setDefaults()
 
 	ptr := reflect.ValueOf(s)
@@ -75,6 +79,8 @@ func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.V
 
 	struct_ := ptr.Elem()
 	structType := struct_.Type()
+
+	var adapter *otelsync.Adapter
 	for i := 0; i < struct_.NumField(); i++ {
 		fieldType := structType.Field(i)
 		if fieldType.Anonymous || !fieldType.IsExported() {
@@ -85,11 +91,36 @@ func walkStruct(m metric.Meter, s any, opts InitOptions, fn func(field reflect.V
 		}
 		field := struct_.Field(i)
 
-		mt, err := makeField(m, fieldType, opts)
+		var (
+			mt  any
+			err error
+		)
+		if fieldType.Type == syncGaugeInt64Type {
+			if adapter == nil {
+				adapter = otelsync.NewAdapter(m)
+			}
+			var observer metric.Int64Observer
+			observer, err = adapter.GaugeInt64(
+				opts.FieldName(opts.Prefix, fieldType),
+				metric.WithUnit(fieldType.Tag.Get("unit")),
+				metric.WithDescription(fieldType.Tag.Get("description")),
+			)
+			if err == nil {
+				mt = observer.(*otelsync.GaugeInt64)
+			}
+		} else {
+			mt, err = makeField(m, fieldType, opts)
+		}
 		if err != nil {
 			return errors.Wrapf(err, "field (%s).%s", structType, fieldType.Name)
 		}
-		fn(field, mt)
+		fn(field, fieldType, mt)
+	}
+
+	if adapter != nil {
+		if _, err := adapter.Register(); err != nil {
+			return errors.Wrap(err, "register otelsync adapter")
+		}
 	}
 
 	return nil
