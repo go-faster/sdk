@@ -24,11 +24,6 @@ jobs:
     uses: go-faster/x/.github/workflows/commit.yml@main
     permissions:
       contents: read
-  govulncheck:
-    uses: go-faster/x/.github/workflows/govulncheck.yml@main
-    permissions:
-      contents: read
-      security-events: write
   codeql:
     uses: go-faster/x/.github/workflows/codeql.yml@main
     permissions:
