@@ -74,9 +74,17 @@ func (r *Registry) WeaverYAML() []byte {
 var globalRegistry = &Registry{}
 
 // Register registers schema for struct s with given options in global registry.
-func Register(s any, opts InitOptions) {
+//
+// Register panics if schema registration fails. Use [Collect] to get all registered schemas.
+// Returns function that initializes metrics of type T with given meter and options.
+func Register[T any](s T, opts InitOptions) func(metric.Meter) (T, error) {
 	if err := globalRegistry.Register(s, opts); err != nil {
 		panic(err)
+	}
+	return func(m metric.Meter) (T, error) {
+		var t T
+		err := Init(m, &t, opts)
+		return t, err
 	}
 }
 
