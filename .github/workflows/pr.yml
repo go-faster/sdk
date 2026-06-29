@@ -1,11 +1,7 @@
 name: pr
 
 on:
-  push:
-    branches: [main]
   pull_request:
-  workflow_dispatch:
-
   # Cancel in-progress runs on new push to the same branch/PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
