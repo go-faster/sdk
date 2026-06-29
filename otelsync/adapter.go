@@ -8,12 +8,16 @@ import (
 
 // Adapter provides a sync adapter over async metric instruments.
 type Adapter struct {
-	meter metric.Meter
-	gauge []*GaugeInt64
+	meter        metric.Meter
+	gauge        []*GaugeInt64
+	gaugeFloat64 []*GaugeFloat64
 }
 
 func (a *Adapter) callback(_ context.Context, o metric.Observer) error {
 	for _, v := range a.gauge {
+		v.observe(o)
+	}
+	for _, v := range a.gaugeFloat64 {
 		v.observe(o)
 	}
 	return nil
@@ -24,6 +28,9 @@ func (a *Adapter) Register() (metric.Registration, error) {
 	var in []metric.Observable
 	for _, v := range a.gauge {
 		in = append(in, v.Int64ObservableGauge)
+	}
+	for _, v := range a.gaugeFloat64 {
+		in = append(in, v.Float64ObservableGauge)
 	}
 	return a.meter.RegisterCallback(a.callback, in...)
 }
@@ -38,6 +45,19 @@ func (a *Adapter) GaugeInt64(name string, options ...metric.Int64ObservableGauge
 		Int64ObservableGauge: og,
 	}
 	a.gauge = append(a.gauge, g)
+	return g, nil
+}
+
+// GaugeFloat64 returns a new sync float64 gauge. Register must be called after creating all gauges.
+func (a *Adapter) GaugeFloat64(name string, options ...metric.Float64ObservableGaugeOption) (metric.Float64Observer, error) {
+	og, err := a.meter.Float64ObservableGauge(name, options...)
+	if err != nil {
+		return nil, err
+	}
+	g := &GaugeFloat64{
+		Float64ObservableGauge: og,
+	}
+	a.gaugeFloat64 = append(a.gaugeFloat64, g)
 	return g, nil
 }
 

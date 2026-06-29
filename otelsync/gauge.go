@@ -38,3 +38,34 @@ func (g *GaugeInt64) observe(o metric.Observer) {
 		o.ObserveInt64(g.Int64ObservableGauge, v, metric.WithAttributes(k.ToSlice()...))
 	}
 }
+
+// GaugeFloat64 is a wrapper around metric.Float64ObservableGauge that stores last value
+// for each attribute set, providing a sync adapter over async gauge.
+type GaugeFloat64 struct {
+	metric.Float64ObservableGauge
+	embedded.Float64Observer
+
+	mux    sync.Mutex
+	values map[attribute.Set]float64
+}
+
+// Observe records a last value for attribute set.
+func (g *GaugeFloat64) Observe(v float64, options ...metric.ObserveOption) {
+	g.mux.Lock()
+	defer g.mux.Unlock()
+
+	if g.values == nil {
+		g.values = make(map[attribute.Set]float64)
+	}
+
+	g.values[metric.NewObserveConfig(options).Attributes()] = v
+}
+
+func (g *GaugeFloat64) observe(o metric.Observer) {
+	g.mux.Lock()
+	defer g.mux.Unlock()
+
+	for k, v := range g.values {
+		o.ObserveFloat64(g.Float64ObservableGauge, v, metric.WithAttributes(k.ToSlice()...))
+	}
+}
