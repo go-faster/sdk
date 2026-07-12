@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/go-faster/sdk/audit"
 	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autopyro"
@@ -52,6 +53,7 @@ type Telemetry struct {
 	tracerProvider  trace.TracerProvider
 	meterProvider   metric.MeterProvider
 	loggerProvider  log.LoggerProvider
+	audit           *audit.Recorder
 	shutdownContext context.Context
 	baseContext     context.Context
 
@@ -177,6 +179,13 @@ func (m *Telemetry) LoggerProvider() log.LoggerProvider {
 	return m.loggerProvider
 }
 
+func (m *Telemetry) Audit() *audit.Recorder {
+	if m.audit == nil {
+		return audit.NewNop()
+	}
+	return m.audit
+}
+
 func (m *Telemetry) TextMapPropagator() propagation.TextMapPropagator {
 	return m.propagator
 }
@@ -208,6 +217,7 @@ func newTelemetry(
 	meterOptions []autometer.Option,
 	tracerOptions []autotracer.Option,
 	logsOptions []autologs.Option,
+	auditOptions []audit.Option,
 ) (*Telemetry, error) {
 	{
 		// Setup global OTEL logger and error handler.
@@ -234,6 +244,18 @@ func newTelemetry(
 		}
 		m.loggerProvider = provider
 		m.registerShutdown("logger", stop)
+	}
+	{
+		exp, err := audit.NewOTLPExporter(ctx, audit.WithLoggerProvider(m.LoggerProvider()))
+		if err != nil {
+			return nil, errors.Wrap(err, "audit otlp exporter")
+		}
+		recorder, stop, err := audit.New(ctx, include(auditOptions, audit.WithExporter(exp))...)
+		if err != nil {
+			return nil, errors.Wrap(err, "audit recorder")
+		}
+		m.audit = recorder
+		m.registerShutdown("audit", stop)
 	}
 	{
 		provider, stop, err := autotracer.NewTracerProvider(ctx,

@@ -117,7 +117,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		ctx, shutdownCtx,
 		lg.Named("metrics"),
 		res,
-		opts.meterOptions, opts.tracerOptions, opts.loggerOptions,
+		opts.meterOptions, opts.tracerOptions, opts.loggerOptions, opts.auditOptions,
 	)
 	if err != nil {
 		panic(err)

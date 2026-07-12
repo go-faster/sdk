@@ -7,6 +7,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
 
+	"github.com/go-faster/sdk/audit"
 	"github.com/go-faster/sdk/autologs"
 	"github.com/go-faster/sdk/autometer"
 	"github.com/go-faster/sdk/autotracer"
@@ -22,6 +23,7 @@ type options struct {
 	meterOptions    []autometer.Option
 	tracerOptions   []autotracer.Option
 	loggerOptions   []autologs.Option
+	auditOptions    []audit.Option
 	resourceOptions []resource.Option
 	resourceFn      func(ctx context.Context) (*resource.Resource, error)
 }
@@ -101,6 +103,13 @@ func WithMeterOptions(opts ...autometer.Option) Option {
 func WithTracerOptions(opts ...autotracer.Option) Option {
 	return optionFunc(func(o *options) {
 		o.tracerOptions = opts
+	})
+}
+
+// WithAuditOptions sets the default audit options for the application.
+func WithAuditOptions(opts ...audit.Option) Option {
+	return optionFunc(func(o *options) {
+		o.auditOptions = opts
 	})
 }
 
