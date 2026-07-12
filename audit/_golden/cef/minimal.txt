@@ -1,0 +1,1 @@
+CEF:1|GoFaster|SDK|v1|test-event-id|User login|6|act=login app=auth cs1Label=Service cs1=auth cs2Label=Component cs2=oidc cs3Label=Environment cs3=test externalId=test-event-id msg=User login outcome=success rt=1783865002118 suser=alice
