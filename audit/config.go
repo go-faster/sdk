@@ -1,11 +1,16 @@
 package audit
 
-import "time"
+import (
+	"time"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+)
 
 // config contains configuration options for a Recorder.
 type config struct {
 	exporters   []Exporter
 	redactor    Redactor
+	resource    *resource.Resource
 	service     string
 	component   string
 	environment string
@@ -15,7 +20,9 @@ type config struct {
 	traceEnrich bool
 }
 
-// newConfig returns a config configured with options.
+// newConfig returns a config configured with options. After folding options,
+// provenance fields still empty are filled from the [resource.Resource] (if
+// set), so explicit [WithService]/[WithComponent]/... win over resource attrs.
 func newConfig(options []Option) config {
 	conf := config{
 		redactor:    NoRedact(),
@@ -24,6 +31,21 @@ func newConfig(options []Option) config {
 	}
 	for _, o := range options {
 		conf = o.apply(conf)
+	}
+	if conf.resource != nil {
+		rs := fromResource(conf.resource)
+		if conf.service == "" {
+			conf.service = rs.service
+		}
+		if conf.component == "" {
+			conf.component = rs.component
+		}
+		if conf.version == "" {
+			conf.version = rs.version
+		}
+		if conf.environment == "" {
+			conf.environment = rs.environment
+		}
 	}
 	return conf
 }
@@ -69,6 +91,20 @@ func WithRedactor(redactor Redactor) Option {
 		if redactor != nil {
 			conf.redactor = redactor
 		}
+		return conf
+	})
+}
+
+// WithResource sets the OpenTelemetry [resource.Resource] used to populate
+// provenance defaults (Service, Component, Version, Environment) from
+// OpenTelemetry semantic-convention attributes when the corresponding Event
+// field is empty at emit time.
+//
+// Explicit [WithService], [WithComponent], [WithVersion], and [WithEnvironment]
+// options take precedence over resource attributes.
+func WithResource(r *resource.Resource) Option {
+	return optionFunc(func(conf config) config {
+		conf.resource = r
 		return conf
 	})
 }

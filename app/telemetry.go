@@ -234,11 +234,8 @@ func newTelemetry(
 	}
 	ctx := baseCtx
 	{
-		provider, stop, err := autologs.NewLoggerProvider(ctx,
-			include(logsOptions,
-				autologs.WithResource(res),
-			)...,
-		)
+		opts := include(logsOptions, autologs.WithResource(res))
+		provider, stop, err := autologs.NewLoggerProvider(ctx, opts...)
 		if err != nil {
 			return nil, errors.Wrap(err, "logger provider")
 		}
@@ -250,7 +247,11 @@ func newTelemetry(
 		if err != nil {
 			return nil, errors.Wrap(err, "audit otlp exporter")
 		}
-		recorder, stop, err := audit.New(ctx, include(auditOptions, audit.WithExporter(exp))...)
+		opts := include(auditOptions,
+			audit.WithExporter(exp),
+			audit.WithResource(res),
+		)
+		recorder, stop, err := audit.New(ctx, opts...)
 		if err != nil {
 			return nil, errors.Wrap(err, "audit recorder")
 		}
@@ -258,11 +259,13 @@ func newTelemetry(
 		m.registerShutdown("audit", stop)
 	}
 	{
-		provider, stop, err := autotracer.NewTracerProvider(ctx,
-			include(tracerOptions,
-				autotracer.WithResource(res),
-			)...,
+		opts := include(tracerOptions,
+			autotracer.WithResource(res),
 		)
+		provider, stop, err := autotracer.NewTracerProvider(ctx, opts...)
+		if err != nil {
+			return nil, errors.Wrap(err, "tracer provider")
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "tracer provider")
 		}
@@ -270,14 +273,14 @@ func newTelemetry(
 		m.registerShutdown("tracer", stop)
 	}
 	{
-		provider, stop, err := autometer.NewMeterProvider(ctx,
-			include(meterOptions,
-				autometer.WithResource(res),
-				autometer.WithOnPrometheusRegistry(func(reg *promClient.Registry) {
-					m.prom = reg
-				}),
-			)...,
+
+		opts := include(meterOptions,
+			autometer.WithResource(res),
+			autometer.WithOnPrometheusRegistry(func(reg *promClient.Registry) {
+				m.prom = reg
+			}),
 		)
+		provider, stop, err := autometer.NewMeterProvider(ctx, opts...)
 		if err != nil {
 			return nil, errors.Wrap(err, "meter provider")
 		}

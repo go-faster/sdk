@@ -45,14 +45,14 @@ func TestOptions(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("Test%d", i+1), func(t *testing.T) {
-			exp := &memoryExporter{}
+			exp := audit.NewMemoryExporter()
 			opts := append(tt.options, audit.WithExporter(exp))
 			ctx := zctx.Base(context.Background(), zaptest.NewLogger(t))
 			r, _, err := audit.New(ctx, opts...)
 			require.NoError(t, err)
 			r.Emit(ctx, audit.NewEvent(audit.EventLogin, "actor", audit.ResultSuccess))
-			require.Len(t, exp.events, 1)
-			tt.check(t, exp.events[0])
+			require.Len(t, exp.Events(), 1)
+			tt.check(t, exp.Events()[0])
 		})
 	}
 }

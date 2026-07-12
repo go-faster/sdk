@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -26,19 +25,19 @@ func TestRecorder(t *testing.T) {
 		name func(t *testing.T, ctx context.Context)
 	}{
 		{func(t *testing.T, ctx context.Context) {
-			one, two := &memoryExporter{}, &memoryExporter{}
+			one, two := audit.NewMemoryExporter(), audit.NewMemoryExporter()
 			r, _, err := audit.New(ctx, audit.WithExporters(one, two))
 			require.NoError(t, err)
 			r.Record(ctx, minimalEvent())
-			require.Len(t, one.events, 1)
-			require.Len(t, two.events, 1)
+			require.Len(t, one.Events(), 1)
+			require.Len(t, two.Events(), 1)
 		}},
 		{func(t *testing.T, ctx context.Context) {
-			exp := &memoryExporter{}
+			exp := audit.NewMemoryExporter()
 			r, _, err := audit.New(ctx, audit.WithExporter(exp), audit.WithRedactor(audit.MaskFields("ActorID")))
 			require.NoError(t, err)
 			r.Record(ctx, minimalEvent())
-			require.Equal(t, "***", exp.events[0].ActorID)
+			require.Equal(t, "***", exp.Events()[0].ActorID)
 		}},
 		{func(t *testing.T, ctx context.Context) {
 			r, _, err := audit.New(ctx, audit.WithExporter(&errorExporter{}))
@@ -68,7 +67,7 @@ func TestEventBuilder(t *testing.T) {
 			require.Error(t, err)
 		}},
 		{func(t *testing.T, ctx context.Context) {
-			exp := &memoryExporter{}
+			exp := audit.NewMemoryExporter()
 			r, _, err := audit.New(ctx,
 				audit.WithExporter(exp),
 				audit.WithClock(func() time.Time { return fixedT0 }),
@@ -77,9 +76,9 @@ func TestEventBuilder(t *testing.T) {
 			)
 			require.NoError(t, err)
 			r.Emit(ctx, audit.NewEvent(audit.EventLogin, "actor", audit.ResultSuccess))
-			require.Equal(t, "test-event-id", exp.events[0].ID)
-			require.Equal(t, fixedT0, exp.events[0].Time)
-			require.Equal(t, "svc", exp.events[0].Service)
+			require.Equal(t, "test-event-id", exp.Events()[0].ID)
+			require.Equal(t, fixedT0, exp.Events()[0].Time)
+			require.Equal(t, "svc", exp.Events()[0].Service)
 		}},
 		{func(t *testing.T, ctx context.Context) {
 			tid, err := trace.TraceIDFromHex("00112233445566778899aabbccddeeff")
@@ -91,43 +90,43 @@ func TestEventBuilder(t *testing.T) {
 			}))
 
 			t.Run("NoEnrichment", func(t *testing.T) {
-				exp := &memoryExporter{}
+				exp := audit.NewMemoryExporter()
 				r, _, err := audit.New(spanCtx, audit.WithExporter(exp))
 				require.NoError(t, err)
 				r.Record(spanCtx, minimalEvent())
-				require.Empty(t, exp.events[0].TraceID)
-				require.Empty(t, exp.events[0].SpanID)
-				require.Empty(t, exp.events[0].CorrelationID)
+				require.Empty(t, exp.Events()[0].TraceID)
+				require.Empty(t, exp.Events()[0].SpanID)
+				require.Empty(t, exp.Events()[0].CorrelationID)
 			})
 
 			t.Run("TraceEnrichment", func(t *testing.T) {
-				exp := &memoryExporter{}
+				exp := audit.NewMemoryExporter()
 				r, _, err := audit.New(spanCtx, audit.WithExporter(exp), audit.WithTraceEnrichment())
 				require.NoError(t, err)
 				r.Record(spanCtx, minimalEvent())
-				require.Equal(t, tid.String(), exp.events[0].TraceID)
-				require.Equal(t, sid.String(), exp.events[0].SpanID)
+				require.Equal(t, tid.String(), exp.Events()[0].TraceID)
+				require.Equal(t, sid.String(), exp.Events()[0].SpanID)
 			})
 
 			t.Run("TraceEnrichmentNoSpan", func(t *testing.T) {
-				exp := &memoryExporter{}
+				exp := audit.NewMemoryExporter()
 				r, _, err := audit.New(ctx, audit.WithExporter(exp), audit.WithTraceEnrichment())
 				require.NoError(t, err)
 				r.Record(ctx, minimalEvent())
-				require.Empty(t, exp.events[0].TraceID)
-				require.Empty(t, exp.events[0].SpanID)
+				require.Empty(t, exp.Events()[0].TraceID)
+				require.Empty(t, exp.Events()[0].SpanID)
 			})
 
 			t.Run("TraceEnrichmentPreservesExplicit", func(t *testing.T) {
-				exp := &memoryExporter{}
+				exp := audit.NewMemoryExporter()
 				r, _, err := audit.New(spanCtx, audit.WithExporter(exp), audit.WithTraceEnrichment())
 				require.NoError(t, err)
 				e := minimalEvent()
 				e.TraceID = "explicit-trace"
 				e.SpanID = "explicit-span"
 				r.Record(spanCtx, e)
-				require.Equal(t, "explicit-trace", exp.events[0].TraceID)
-				require.Equal(t, "explicit-span", exp.events[0].SpanID)
+				require.Equal(t, "explicit-trace", exp.Events()[0].TraceID)
+				require.Equal(t, "explicit-span", exp.Events()[0].SpanID)
 			})
 		}},
 	}
@@ -142,21 +141,6 @@ func TestMain(m *testing.M) {
 	gold.Init()
 	os.Exit(m.Run())
 }
-
-type memoryExporter struct {
-	events []audit.Event
-	mu     sync.Mutex
-}
-
-func (m *memoryExporter) Export(ctx context.Context, events []audit.Event) error {
-	m.mu.Lock()
-	m.events = append(m.events, events...)
-	m.mu.Unlock()
-	return nil
-}
-
-func (m *memoryExporter) Close(ctx context.Context) error { return nil }
-func (m *memoryExporter) Name() string                    { return "memory" }
 
 type errorExporter struct{}
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 
 	"github.com/go-faster/sdk/zctx"
@@ -57,6 +58,7 @@ type syslogExporterConfig struct {
 	appName        string
 	procID         string
 	sdid           string
+	resource       *resource.Resource
 	connectTimeout time.Duration
 	reconnect      bool
 }
@@ -81,10 +83,23 @@ type SyslogExporter struct {
 }
 
 // NewSyslogExporter creates a SyslogExporter.
+//
+// Hostname defaults from host.name and AppName from service.name when
+// [WithSyslogResource] is used; [WithSyslogHostname] and [WithSyslogAppName]
+// take precedence over resource defaults.
 func NewSyslogExporter(addr string, opts ...SyslogExporterOption) (*SyslogExporter, error) {
 	cfg := syslogExporterConfig{facility: DefaultSyslogFacility, sdid: DefaultSyslogSDID, connectTimeout: 5 * time.Second, reconnect: true}
 	for _, o := range opts {
 		cfg = o.applySyslog(cfg)
+	}
+	if cfg.resource != nil {
+		rs := fromResource(cfg.resource)
+		if cfg.hostname == "" {
+			cfg.hostname = rs.host
+		}
+		if cfg.appName == "" {
+			cfg.appName = rs.service
+		}
 	}
 	return &SyslogExporter{addr: addr, cfg: cfg}, nil
 }
@@ -124,6 +139,16 @@ func WithSyslogSDID(id string) SyslogExporterOption {
 	return syslogExporterOptionFunc(func(conf syslogExporterConfig) syslogExporterConfig { conf.sdid = id; return conf })
 }
 
+// WithSyslogResource sets the OpenTelemetry [resource.Resource] used to populate
+// Hostname (host.name) and AppName (service.name) defaults. Explicit
+// [WithSyslogHostname] and [WithSyslogAppName] take precedence.
+func WithSyslogResource(r *resource.Resource) SyslogExporterOption {
+	return syslogExporterOptionFunc(func(conf syslogExporterConfig) syslogExporterConfig {
+		conf.resource = r
+		return conf
+	})
+}
+
 // WithSyslogConnectTimeout sets connect timeout.
 func WithSyslogConnectTimeout(d time.Duration) SyslogExporterOption {
 	return syslogExporterOptionFunc(func(conf syslogExporterConfig) syslogExporterConfig { conf.connectTimeout = d; return conf })
@@ -133,6 +158,13 @@ func WithSyslogConnectTimeout(d time.Duration) SyslogExporterOption {
 func WithSyslogReconnect(b bool) SyslogExporterOption {
 	return syslogExporterOptionFunc(func(conf syslogExporterConfig) syslogExporterConfig { conf.reconnect = b; return conf })
 }
+
+// Hostname returns the resolved syslog HOSTNAME (from [WithSyslogHostname]
+// or [WithSyslogResource]).
+func (s *SyslogExporter) Hostname() string { return s.cfg.hostname }
+
+// AppName returns the resolved syslog APP-NAME.
+func (s *SyslogExporter) AppName() string { return s.cfg.appName }
 
 // Export implements Exporter.
 func (s *SyslogExporter) Export(ctx context.Context, events []Event) error {

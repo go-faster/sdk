@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/go-faster/errors"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // CEFTransport transports encoded CEF records.
@@ -48,6 +49,7 @@ type cefExporterConfig struct {
 	vendor         string
 	product        string
 	version        string
+	resource       *resource.Resource
 	transport      CEFTransport
 	facility       Facility
 	severityMapper func(Severity) (string, error)
@@ -67,10 +69,26 @@ func (f cefExporterOptionFunc) applyCEF(conf cefExporterConfig) cefExporterConfi
 type CEFExporter struct{ cfg cefExporterConfig }
 
 // NewCEFExporter creates a CEFExporter.
+//
+// Device fields default from the [resource.Resource] (vendor <- device.manufacturer,
+// product <- service.name, version <- service.version) when set via
+// [WithCEFResource]; [WithCEFDevice] takes precedence over resource defaults.
 func NewCEFExporter(opts ...CEFExporterOption) (*CEFExporter, error) {
 	cfg := cefExporterConfig{maxLen: 8192, facility: DefaultSyslogFacility}
 	for _, o := range opts {
 		cfg = o.applyCEF(cfg)
+	}
+	if cfg.resource != nil {
+		rs := fromResource(cfg.resource)
+		if cfg.vendor == "" {
+			cfg.vendor = rs.vendor
+		}
+		if cfg.product == "" {
+			cfg.product = rs.service
+		}
+		if cfg.version == "" {
+			cfg.version = rs.version
+		}
 	}
 	if cfg.vendor == "" || cfg.product == "" || cfg.version == "" {
 		return nil, errors.New("audit: CEF device is required")
@@ -81,10 +99,20 @@ func NewCEFExporter(opts ...CEFExporterOption) (*CEFExporter, error) {
 	return &CEFExporter{cfg: cfg}, nil
 }
 
-// WithCEFDevice sets CEF device fields.
+// WithCEFDevice sets CEF device fields. Takes precedence over [WithCEFResource].
 func WithCEFDevice(vendor, product, version string) CEFExporterOption {
 	return cefExporterOptionFunc(func(conf cefExporterConfig) cefExporterConfig {
 		conf.vendor, conf.product, conf.version = vendor, product, version
+		return conf
+	})
+}
+
+// WithCEFResource sets the OpenTelemetry [resource.Resource] used to populate
+// CEF device defaults: vendor <- device.manufacturer, product <- service.name,
+// version <- service.version. Explicit [WithCEFDevice] wins over resource.
+func WithCEFResource(r *resource.Resource) CEFExporterOption {
+	return cefExporterOptionFunc(func(conf cefExporterConfig) cefExporterConfig {
+		conf.resource = r
 		return conf
 	})
 }
@@ -108,6 +136,16 @@ func WithCEFSeverityMapper(fn func(Severity) (string, error)) CEFExporterOption 
 func WithCEFMaxLen(n int) CEFExporterOption {
 	return cefExporterOptionFunc(func(conf cefExporterConfig) cefExporterConfig { conf.maxLen = n; return conf })
 }
+
+// DeviceVendor returns the resolved CEF device vendor (from [WithCEFDevice]
+// or [WithCEFResource]).
+func (c *CEFExporter) DeviceVendor() string { return c.cfg.vendor }
+
+// DeviceProduct returns the resolved CEF device product.
+func (c *CEFExporter) DeviceProduct() string { return c.cfg.product }
+
+// DeviceVersion returns the resolved CEF device version.
+func (c *CEFExporter) DeviceVersion() string { return c.cfg.version }
 
 // Export implements Exporter.
 func (c *CEFExporter) Export(ctx context.Context, events []Event) error {
