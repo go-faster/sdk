@@ -45,20 +45,11 @@ const (
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: zap.NewProductionConfig(),
-		zapTee:    true,
-		otelZap:   true,
-		ctx:       context.Background(),
-		resourceOptions: []resource.Option{
-			resource.WithProcessRuntimeDescription(),
-			resource.WithProcessRuntimeVersion(),
-			resource.WithProcessRuntimeName(),
-			resource.WithOS(),
-			resource.WithTelemetrySDK(),
-			resource.WithHost(),
-			resource.WithProcess(),
-			resource.WithFromEnv(),
-		},
+		zapConfig:       zap.NewProductionConfig(),
+		zapTee:          true,
+		otelZap:         true,
+		ctx:             context.Background(),
+		resourceOptions: defaultResourceOptions(),
 	}
 	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
 		r, err := resource.New(ctx, opts.resourceOptions...)

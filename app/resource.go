@@ -7,6 +7,22 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+func defaultResourceOptions() []resource.Option {
+	return []resource.Option{
+		resource.WithProcessRuntimeDescription(),
+		resource.WithProcessRuntimeVersion(),
+		resource.WithProcessRuntimeName(),
+		resource.WithOS(),
+		resource.WithTelemetrySDK(),
+		resource.WithHost(),
+		resource.WithProcessPID(),
+		resource.WithProcessExecutableName(),
+		resource.WithProcessExecutablePath(),
+		resource.WithProcessCommandArgs(),
+		resource.WithFromEnv(),
+	}
+}
+
 // Resource returns new resource for application.
 //
 // Combines following detectors:
