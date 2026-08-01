@@ -44,6 +44,8 @@ func getInfo(modulePath string) (info Info, _ bool) {
 				if t, err := time.Parse(time.RFC3339Nano, s.Value); err == nil {
 					info.Time = t
 				}
+			case "vcs.modified":
+				info.Modified = s.Value == "true"
 			}
 		}
 	}
@@ -61,6 +63,8 @@ type Info struct {
 	Commit string
 	// Time is the time of the build.
 	Time time.Time
+	// Modified reports whether the working tree had local modifications on top of Commit.
+	Modified bool
 }
 
 // GetInfo returns the build information.
@@ -79,7 +83,13 @@ func (i Info) String() string {
 	}
 	if commit := i.Commit; commit != "" {
 		s.WriteByte('-')
+		if len(commit) > 12 {
+			commit = commit[:12]
+		}
 		s.WriteString(commit)
+		if i.Modified {
+			s.WriteString("-dirty")
+		}
 	}
 
 	if t, v := i.Time, i.GoVersion; v != "" || !t.IsZero() {

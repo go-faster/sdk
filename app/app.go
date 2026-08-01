@@ -105,6 +105,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 				zap.String("version", info.Version),
 				zap.String("commit", info.Commit),
 				zap.String("go_version", info.GoVersion),
+				zap.Bool("modified", info.Modified),
 			)
 		} else {
 			lg.Info("Starting")
