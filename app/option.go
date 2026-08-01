@@ -24,6 +24,7 @@ type options struct {
 	loggerOptions   []autologs.Option
 	resourceOptions []resource.Option
 	resourceFn      func(ctx context.Context) (*resource.Resource, error)
+	modulePath      string
 }
 
 func (o *options) modifyZapConfig(cb func(*zap.Config)) {
@@ -140,5 +141,15 @@ func WithContext(ctx context.Context) Option {
 func WithResource(fn func(ctx context.Context) (*resource.Resource, error)) Option {
 	return optionFunc(func(o *options) {
 		o.resourceFn = fn
+	})
+}
+
+// WithModulePath sets the module path used to look up build version information
+// (e.g. "github.com/go-faster/sdk"). If set, version info is logged on startup.
+//
+// See [cliversion.GetInfo].
+func WithModulePath(modulePath string) Option {
+	return optionFunc(func(o *options) {
+		o.modulePath = modulePath
 	})
 }
