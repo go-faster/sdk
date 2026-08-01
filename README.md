@@ -18,6 +18,7 @@ Also automatically sets up `GOMAXPROCS` and `GOMEMLIMIT`.
 | `app`        | Automatic setup observability and run daemon               |
 | `autometric` | Reflect-based OpenTelemetry metric initializer             |
 | `otelsync`   | OpenTelemetry synchronous adapter for async metrics        |
+| `cliversion` | Build/version info from `runtime/debug.BuildInfo`          |
 
 ## Environment variables
 
