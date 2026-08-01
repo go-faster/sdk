@@ -23,6 +23,7 @@ import (
 	"github.com/go-faster/sdk/internal/zapencoder"
 
 	"github.com/go-faster/sdk/autologs"
+	"github.com/go-faster/sdk/cliversion"
 	"github.com/go-faster/sdk/zctx"
 )
 
@@ -98,7 +99,20 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
-	lg.Info("Starting")
+	if opts.modulePath != "" {
+		if info, ok := cliversion.GetInfo(opts.modulePath); ok {
+			lg.Info("Starting",
+				zap.String("version", info.Version),
+				zap.String("commit", info.Commit),
+				zap.String("go_version", info.GoVersion),
+				zap.Bool("modified", info.Modified),
+			)
+		} else {
+			lg.Info("Starting")
+		}
+	} else {
+		lg.Info("Starting")
+	}
 	res, err := opts.resourceFn(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get resource: %v", err))
