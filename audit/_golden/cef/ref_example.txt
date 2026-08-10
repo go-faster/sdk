@@ -1,0 +1,1 @@
+CEF:1|MyCompany|AuthService|2.0|200|User login|5|act=login app=auth cs1Label=Target cs1=WebServer cs2Label=Service cs2=auth cs3Label=Component cs3=oidc cs4Label=Environment cs4=test externalId=200 msg=User login outcome=success rt=1783865002118 src=192.0.2.5 spt=443 suser=alice cs5Label=cat cs5=Authentication cs6Label=proto cs6=HTTPS
