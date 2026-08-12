@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/go-faster/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,12 +20,14 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 
+	"github.com/go-faster/sdk/internal/autoenv"
 	"github.com/go-faster/sdk/zctx"
 )
 
 const (
 	expOTLP       = "otlp"
-	expNone       = "none" // no-op
+	expConsole    = "console"
+	expNone       = autoenv.ExporterNone // no-op
 	expPrometheus = "prometheus"
 
 	protoHTTP         = "http"
@@ -42,7 +43,7 @@ const (
 
 func writerByName(name string) io.Writer {
 	switch name {
-	case writerStdout:
+	case writerStdout, expConsole:
 		return os.Stdout
 	case writerStderr:
 		return os.Stderr
@@ -64,6 +65,8 @@ func noopHandler(_ context.Context) error { return nil }
 type ShutdownFunc func(ctx context.Context) error
 
 // NewMeterProvider returns new metric.MeterProvider based on environment variables.
+//
+// OTEL_METRICS_EXPORTER is a comma-separated list of exporters, all of them are used.
 func NewMeterProvider(ctx context.Context, options ...Option) (
 	meterProvider metric.MeterProvider,
 	meterShutdown ShutdownFunc,
@@ -71,19 +74,35 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 ) {
 	cfg := newConfig(options)
 	lg := zctx.From(ctx)
+
+	const envName = "OTEL_METRICS_EXPORTER"
+	exporters, err := autoenv.ParseExporters(getEnvOr(envName, expOTLP))
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "parse %s", envName)
+	}
+	if exporters[0] == expNone {
+		lg.Debug("Using no-op metrics exporter")
+		return noop.NewMeterProvider(), noopHandler, nil
+	}
+
 	var metricOptions []sdkmetric.Option
 	if cfg.res != nil {
 		metricOptions = append(metricOptions, sdkmetric.WithResource(cfg.res))
 	}
-
-	ret := func(r sdkmetric.Reader) (metric.MeterProvider, func(ctx context.Context) error, error) {
-		metricOptions = append(metricOptions, sdkmetric.WithReader(r))
-		provider := sdkmetric.NewMeterProvider(metricOptions...)
-		return provider, provider.Shutdown, nil
+	for _, exporter := range exporters {
+		reader, err := newMetricReader(ctx, cfg, exporter)
+		if err != nil {
+			return nil, nil, err
+		}
+		metricOptions = append(metricOptions, sdkmetric.WithReader(reader))
 	}
 
-	// Metrics exporter.
-	exporter := strings.TrimSpace(getEnvOr("OTEL_METRICS_EXPORTER", expOTLP))
+	provider := sdkmetric.NewMeterProvider(metricOptions...)
+	return provider, provider.Shutdown, nil
+}
+
+func newMetricReader(ctx context.Context, cfg config, exporter string) (sdkmetric.Reader, error) {
+	lg := zctx.From(ctx)
 	switch exporter {
 	case expPrometheus:
 		lg.Debug("Using Prometheus metrics exporter")
@@ -101,7 +120,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 			otelprometheus.WithRegisterer(reg),
 		)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "create Prometheus exporter")
+			return nil, errors.Wrap(err, "create Prometheus exporter")
 		}
 		// Register legacy prometheus-only runtime metrics for backward compatibility.
 		reg.MustRegister(
@@ -109,7 +128,7 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 			collectors.NewGoCollector(),
 			collectors.NewBuildInfoCollector(),
 		)
-		return ret(exp)
+		return exp, nil
 	case expOTLP:
 		proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
 		if proto == "" {
@@ -123,19 +142,19 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlpmetrichttp.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP HTTP metric exporter")
+				return nil, errors.Wrap(err, "create OTLP HTTP metric exporter")
 			}
-			return ret(sdkmetric.NewPeriodicReader(exp))
+			return sdkmetric.NewPeriodicReader(exp), nil
 		case protoGRPC:
 			exp, err := otlpmetricgrpc.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP gRPC metric exporter")
+				return nil, errors.Wrap(err, "create OTLP gRPC metric exporter")
 			}
-			return ret(sdkmetric.NewPeriodicReader(exp))
+			return sdkmetric.NewPeriodicReader(exp), nil
 		default:
-			return nil, nil, errors.Errorf("unsupported metric OTLP protocol %q", proto)
+			return nil, errors.Errorf("unsupported metric OTLP protocol %q", proto)
 		}
-	case writerStdout, writerStderr:
+	case writerStdout, writerStderr, expConsole:
 		lg.Debug("Using stdout metrics exporter", zap.String("writer", exporter))
 		writer := cfg.writer
 		if writer == nil {
@@ -144,12 +163,9 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		enc := json.NewEncoder(writer)
 		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q metric exporter", exporter)
+			return nil, errors.Wrapf(err, "create %q metric exporter", exporter)
 		}
-		return ret(sdkmetric.NewPeriodicReader(exp))
-	case expNone:
-		lg.Debug("Using no-op metrics exporter")
-		return noop.NewMeterProvider(), noopHandler, nil
+		return sdkmetric.NewPeriodicReader(exp), nil
 	default:
 		lookup := cfg.lookup
 		if lookup == nil {
@@ -158,14 +174,14 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Looking for metrics exporter", zap.String("exporter", exporter))
 		exp, ok, err := lookup(ctx, exporter)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q", exporter)
+			return nil, errors.Wrapf(err, "create %q", exporter)
 		}
 		if !ok {
 			break
 		}
 
 		lg.Debug("Using user-defined metrics exporter", zap.String("exporter", exporter))
-		return ret(exp)
+		return exp, nil
 	}
-	return nil, nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)
+	return nil, errors.Errorf("unsupported OTEL_METRICS_EXPORTER %q", exporter)
 }

@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/go-faster/errors"
-	"github.com/go-faster/sdk/autologs"
-	"github.com/go-faster/sdk/zctx"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/go-faster/sdk/autologs"
+	"github.com/go-faster/sdk/zctx"
 )
 
 func TestNewLoggerProviderLevel(t *testing.T) {
@@ -57,6 +58,58 @@ func TestNewLoggerProviderLevel(t *testing.T) {
 		},
 		msgs,
 	)
+}
+
+func TestNewLoggerProviderMultipleExporters(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("OTEL_LOGS_EXPORTER", "first,second")
+	ctx = zctx.Base(ctx, zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel)))
+
+	exporters := map[string]*testLogExporter{
+		"first":  {},
+		"second": {},
+	}
+	provider, shutdown, err := autologs.NewLoggerProvider(ctx,
+		autologs.WithLookupExporter(func(ctx context.Context, name string) (sdklog.Exporter, bool, error) {
+			exp, ok := exporters[name]
+			if !ok {
+				return nil, false, errors.Errorf("unexpected exporter %q", name)
+			}
+			return exp, true, nil
+		}),
+	)
+	require.NoError(t, err)
+
+	otelLg := zap.New(otelzap.NewCore("github.com/go-faster/sdk/app",
+		otelzap.WithLoggerProvider(provider),
+	))
+	otelLg.Info("information")
+	require.NoError(t, otelLg.Sync())
+	require.NoError(t, shutdown(ctx))
+
+	for name, exp := range exporters {
+		records := exp.Records()
+		require.Lenf(t, records, 1, "exporter %q", name)
+		require.Equal(t, "information", records[0].Body().AsString())
+	}
+}
+
+func TestNewLoggerProviderNegative(t *testing.T) {
+	ctx := context.Background()
+	for _, exp := range []string{
+		"unsupported",
+		"none,stdout",
+		"stdout,none",
+		",",
+	} {
+		t.Run(exp, func(t *testing.T) {
+			t.Setenv("OTEL_LOGS_EXPORTER", exp)
+			provider, shutdown, err := autologs.NewLoggerProvider(ctx)
+			require.Error(t, err)
+			require.Nil(t, provider)
+			require.Nil(t, shutdown)
+		})
+	}
 }
 
 type testLogExporter struct {

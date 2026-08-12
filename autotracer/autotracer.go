@@ -6,7 +6,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -17,12 +16,14 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 
+	"github.com/go-faster/sdk/internal/autoenv"
 	"github.com/go-faster/sdk/zctx"
 )
 
 const (
-	expOTLP = "otlp"
-	expNone = "none" // no-op
+	expOTLP    = "otlp"
+	expConsole = "console"
+	expNone    = autoenv.ExporterNone // no-op
 
 	protoHTTP         = "http"
 	protoHTTPProtobuf = "http/protobuf"
@@ -37,7 +38,7 @@ const (
 
 func writerByName(name string) io.Writer {
 	switch name {
-	case writerStdout:
+	case writerStdout, expConsole:
 		return os.Stdout
 	case writerStderr:
 		return os.Stderr
@@ -57,6 +58,10 @@ func nop(_ context.Context) error { return nil }
 
 type ShutdownFunc func(ctx context.Context) error
 
+// NewTracerProvider initializes new [trace.TracerProvider] with the given options
+// from environment variables.
+//
+// OTEL_TRACES_EXPORTER is a comma-separated list of exporters, all of them are used.
 func NewTracerProvider(ctx context.Context, options ...Option) (
 	tracerProvider trace.TracerProvider,
 	tracerShutdown ShutdownFunc,
@@ -64,17 +69,35 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 ) {
 	cfg := newConfig(options)
 	lg := zctx.From(ctx)
+
+	const envName = "OTEL_TRACES_EXPORTER"
+	exporters, err := autoenv.ParseExporters(getEnvOr(envName, expOTLP))
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "parse %s", envName)
+	}
+	if exporters[0] == expNone {
+		lg.Debug("Using no-op trace exporter")
+		return noop.NewTracerProvider(), nop, nil
+	}
+
 	var traceOptions []sdktrace.TracerProviderOption
 	if cfg.res != nil {
 		traceOptions = append(traceOptions, sdktrace.WithResource(cfg.res))
 	}
-	ret := func(e sdktrace.SpanExporter) (trace.TracerProvider, func(ctx context.Context) error, error) {
-		traceOptions = append(traceOptions, sdktrace.WithBatcher(e))
-		provider := sdktrace.NewTracerProvider(traceOptions...)
-		return provider, provider.Shutdown, nil
+	for _, exporter := range exporters {
+		exp, err := newSpanExporter(ctx, cfg, exporter)
+		if err != nil {
+			return nil, nil, err
+		}
+		traceOptions = append(traceOptions, sdktrace.WithBatcher(exp))
 	}
 
-	exporter := strings.TrimSpace(getEnvOr("OTEL_TRACES_EXPORTER", expOTLP))
+	provider := sdktrace.NewTracerProvider(traceOptions...)
+	return provider, provider.Shutdown, nil
+}
+
+func newSpanExporter(ctx context.Context, cfg config, exporter string) (sdktrace.SpanExporter, error) {
+	lg := zctx.From(ctx)
 	switch exporter {
 	case expOTLP:
 		proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
@@ -89,19 +112,19 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlptracehttp.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP HTTP trace exporter")
+				return nil, errors.Wrap(err, "create OTLP HTTP trace exporter")
 			}
-			return ret(exp)
+			return exp, nil
 		case protoGRPC:
 			exp, err := otlptracegrpc.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP gRPC trace exporter")
+				return nil, errors.Wrap(err, "create OTLP gRPC trace exporter")
 			}
-			return ret(exp)
+			return exp, nil
 		default:
-			return nil, nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
+			return nil, errors.Errorf("unsupported traces otlp protocol %q", proto)
 		}
-	case writerStdout, writerStderr:
+	case writerStdout, writerStderr, expConsole:
 		lg.Debug("Using stdout trace exporter", zap.String("writer", exporter))
 		writer := cfg.writer
 		if writer == nil {
@@ -109,12 +132,9 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		exp, err := stdouttrace.New(stdouttrace.WithWriter(writer))
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q trace exporter", exporter)
+			return nil, errors.Wrapf(err, "create %q trace exporter", exporter)
 		}
-		return ret(exp)
-	case expNone:
-		lg.Debug("Using no-op trace exporter")
-		return noop.NewTracerProvider(), nop, nil
+		return exp, nil
 	default:
 		lookup := cfg.lookup
 		if lookup == nil {
@@ -123,14 +143,14 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Looking for traces exporter", zap.String("exporter", exporter))
 		exp, ok, err := lookup(ctx, exporter)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q", exporter)
+			return nil, errors.Wrapf(err, "create %q", exporter)
 		}
 		if !ok {
 			break
 		}
 
 		lg.Debug("Using user-defined traces exporter", zap.String("exporter", exporter))
-		return ret(exp)
+		return exp, nil
 	}
-	return nil, nil, errors.Errorf("unsupported OTEL_TRACES_EXPORTER %q", exporter)
+	return nil, errors.Errorf("unsupported OTEL_TRACES_EXPORTER %q", exporter)
 }

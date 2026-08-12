@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -16,12 +15,14 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/go-faster/sdk/internal/autoenv"
 	"github.com/go-faster/sdk/zctx"
 )
 
 const (
-	expOTLP = "otlp"
-	expNone = "none" // no-op
+	expOTLP    = "otlp"
+	expConsole = "console"
+	expNone    = autoenv.ExporterNone // no-op
 
 	protoHTTP         = "http"
 	protoHTTPProtobuf = "http/protobuf"
@@ -36,7 +37,7 @@ const (
 
 func writerByName(name string) io.Writer {
 	switch name {
-	case writerStdout:
+	case writerStdout, expConsole:
 		return os.Stdout
 	case writerStderr:
 		return os.Stderr
@@ -58,6 +59,8 @@ func nop(_ context.Context) error { return nil }
 type ShutdownFunc func(ctx context.Context) error
 
 // NewLoggerProvider initializes new [log.LoggerProvider] with the given options from environment variables.
+//
+// OTEL_LOGS_EXPORTER is a comma-separated list of exporters, all of them are used.
 func NewLoggerProvider(ctx context.Context, options ...Option) (
 	logProvider log.LoggerProvider,
 	logShutdown ShutdownFunc,
@@ -65,22 +68,41 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 ) {
 	cfg := newConfig(options)
 	lg := zctx.From(ctx)
+
+	const envName = "OTEL_LOGS_EXPORTER"
+	exporters, err := autoenv.ParseExporters(getEnvOr(envName, expOTLP))
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "parse %s", envName)
+	}
+	if exporters[0] == expNone {
+		lg.Debug("Using no-op logs exporter")
+		return noop.NewLoggerProvider(), nop, nil
+	}
+
 	var logOptions []sdklog.LoggerProviderOption
 	if cfg.res != nil {
 		logOptions = append(logOptions, sdklog.WithResource(cfg.res))
 	}
-
-	ret := func(e sdklog.Exporter) (log.LoggerProvider, func(ctx context.Context) error, error) {
+	severity := zapLevelToOTelSeverity(lg.Level())
+	for _, exporter := range exporters {
+		exp, err := newLogExporter(ctx, cfg, exporter)
+		if err != nil {
+			return nil, nil, err
+		}
 		logOptions = append(logOptions,
 			sdklog.WithProcessor(&levelFilterProcessor{
-				next:     sdklog.NewBatchProcessor(e),
-				severity: zapLevelToOTelSeverity(lg.Level()),
+				next:     sdklog.NewBatchProcessor(exp),
+				severity: severity,
 			}),
 		)
-		provider := sdklog.NewLoggerProvider(logOptions...)
-		return provider, provider.Shutdown, nil
 	}
-	exporter := strings.TrimSpace(getEnvOr("OTEL_LOGS_EXPORTER", expOTLP))
+
+	provider := sdklog.NewLoggerProvider(logOptions...)
+	return provider, provider.Shutdown, nil
+}
+
+func newLogExporter(ctx context.Context, cfg config, exporter string) (sdklog.Exporter, error) {
+	lg := zctx.From(ctx)
 	switch exporter {
 	case expOTLP:
 		proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
@@ -95,19 +117,19 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		case protoHTTP, protoHTTPProtobuf:
 			exp, err := otlploghttp.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP HTTP logs exporter")
+				return nil, errors.Wrap(err, "create OTLP HTTP logs exporter")
 			}
-			return ret(exp)
+			return exp, nil
 		case protoGRPC:
 			exp, err := otlploggrpc.New(ctx)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "create OTLP gRPC logs exporter")
+				return nil, errors.Wrap(err, "create OTLP gRPC logs exporter")
 			}
-			return ret(exp)
+			return exp, nil
 		default:
-			return nil, nil, errors.Errorf("unsupported logs otlp protocol %q", proto)
+			return nil, errors.Errorf("unsupported logs otlp protocol %q", proto)
 		}
-	case writerStdout, writerStderr:
+	case writerStdout, writerStderr, expConsole:
 		lg.Debug("Using stdout log exporter", zap.String("writer", exporter))
 		writer := cfg.writer
 		if writer == nil {
@@ -115,12 +137,9 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		}
 		exp, err := stdoutlog.New(stdoutlog.WithWriter(writer))
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q logs exporter", exporter)
+			return nil, errors.Wrapf(err, "create %q logs exporter", exporter)
 		}
-		return ret(exp)
-	case expNone:
-		lg.Debug("Using no-op logs exporter")
-		return noop.NewLoggerProvider(), nop, nil
+		return exp, nil
 	default:
 		lookup := cfg.lookup
 		if lookup == nil {
@@ -129,16 +148,16 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		lg.Debug("Looking for logs exporter", zap.String("exporter", exporter))
 		exp, ok, err := lookup(ctx, exporter)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "create %q", exporter)
+			return nil, errors.Wrapf(err, "create %q", exporter)
 		}
 		if !ok {
 			break
 		}
 
 		lg.Debug("Using user-defined log exporter", zap.String("exporter", exporter))
-		return ret(exp)
+		return exp, nil
 	}
-	return nil, nil, errors.Errorf("unsupported OTEL_LOGS_EXPORTER %q", exporter)
+	return nil, errors.Errorf("unsupported OTEL_LOGS_EXPORTER %q", exporter)
 }
 
 // levelFilterProcessor implements level filtering, since otlplog does not.

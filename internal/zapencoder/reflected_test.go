@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-faster/sdk/gold"
-	"github.com/go-faster/sdk/internal/zapencoder"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/go-faster/sdk/gold"
+	"github.com/go-faster/sdk/internal/zapencoder"
 )
 
 func constantTimeEncoder(now time.Time) zapcore.TimeEncoder {
