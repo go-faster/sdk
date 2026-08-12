@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -19,8 +20,20 @@ func defaultResourceOptions() []resource.Option {
 		resource.WithProcessExecutableName(),
 		resource.WithProcessExecutablePath(),
 		resource.WithProcessCommandArgs(),
-		resource.WithFromEnv(),
 	}
+}
+
+// newResource builds resource from given options.
+//
+// [resource.WithFromEnv] is always applied last, so OTEL_SERVICE_NAME and
+// OTEL_RESOURCE_ATTRIBUTES take precedence over attributes set programmatically.
+func newResource(ctx context.Context, opts []resource.Option) (*resource.Resource, error) {
+	opts = append(slices.Clip(opts), resource.WithFromEnv())
+	r, err := resource.New(ctx, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "new")
+	}
+	return resource.Merge(resource.Default(), r)
 }
 
 // Resource returns new resource for application.

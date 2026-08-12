@@ -105,9 +105,12 @@ func WithTracerOptions(opts ...autotracer.Option) Option {
 	})
 }
 
-// WithResourceOptions sets the default resource options.
+// WithResourceOptions replaces the default resource options.
 //
 // Use before [WithResource] or [WithServiceName] to override default resource options.
+//
+// Note that [resource.WithFromEnv] is always applied last regardless of given options,
+// so OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES keep working.
 func WithResourceOptions(opts ...resource.Option) Option {
 	return optionFunc(func(o *options) {
 		o.resourceOptions = opts
@@ -115,6 +118,8 @@ func WithResourceOptions(opts ...resource.Option) Option {
 }
 
 // WithServiceName sets the default service name for the application.
+//
+// Overridden by OTEL_SERVICE_NAME or service.name from OTEL_RESOURCE_ATTRIBUTES.
 func WithServiceName(name string) Option {
 	return optionFunc(func(o *options) {
 		o.resourceOptions = append(o.resourceOptions, resource.WithAttributes(semconv.ServiceName(name)))
@@ -122,6 +127,8 @@ func WithServiceName(name string) Option {
 }
 
 // WithServiceNamespace sets the default service namespace for the application.
+//
+// Overridden by service.namespace from OTEL_RESOURCE_ATTRIBUTES.
 func WithServiceNamespace(namespace string) Option {
 	return optionFunc(func(o *options) {
 		o.resourceOptions = append(o.resourceOptions, resource.WithAttributes(semconv.ServiceNamespace(namespace)))

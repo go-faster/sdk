@@ -45,12 +45,13 @@ func main() {
 		app.WithServiceNamespace("sdk"),
 
 		// Set default resource options.
+		//
+		// Note that resource.WithFromEnv() is always applied last.
 		app.WithResourceOptions(
 			resource.WithProcessRuntimeDescription(),
 			resource.WithProcessRuntimeVersion(),
 			resource.WithProcessRuntimeName(),
 			resource.WithOS(),
-			resource.WithFromEnv(),
 			resource.WithTelemetrySDK(),
 			resource.WithHost(),
 			resource.WithProcess(),
