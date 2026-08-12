@@ -53,11 +53,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		resourceOptions: defaultResourceOptions(),
 	}
 	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
-		r, err := resource.New(ctx, opts.resourceOptions...)
-		if err != nil {
-			return nil, errors.Wrap(err, "new")
-		}
-		return resource.Merge(resource.Default(), r)
+		return newResource(ctx, opts.resourceOptions)
 	}
 	if v, err := strconv.ParseBool(os.Getenv("OTEL_ZAP_TEE")); err == nil {
 		// Override default.
