@@ -2,6 +2,7 @@ package autologs_test
 
 import (
 	"context"
+	"io"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -92,6 +93,44 @@ func TestNewLoggerProviderMultipleExporters(t *testing.T) {
 		require.Lenf(t, records, 1, "exporter %q", name)
 		require.Equal(t, "information", records[0].Body().AsString())
 	}
+}
+
+func TestNewLoggerProviderAdditionalExporters(t *testing.T) {
+	ctx := zctx.Base(context.Background(), zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel)))
+
+	t.Run("Additional", func(t *testing.T) {
+		t.Setenv("OTEL_LOGS_EXPORTER", "stdout")
+
+		exporter := &testLogExporter{}
+		provider, shutdown, err := autologs.NewLoggerProvider(ctx,
+			autologs.WithWriter(io.Discard),
+			autologs.WithAdditionalExporters(exporter),
+		)
+		require.NoError(t, err)
+
+		otelLg := zap.New(otelzap.NewCore("test", otelzap.WithLoggerProvider(provider)))
+		otelLg.Info("information")
+		require.NoError(t, otelLg.Sync())
+		require.NoError(t, shutdown(ctx))
+
+		require.Len(t, exporter.Records(), 1)
+	})
+	t.Run("None", func(t *testing.T) {
+		t.Setenv("OTEL_LOGS_EXPORTER", "none")
+
+		exporter := &testLogExporter{}
+		provider, shutdown, err := autologs.NewLoggerProvider(ctx,
+			autologs.WithAdditionalExporters(exporter),
+		)
+		require.NoError(t, err)
+
+		otelLg := zap.New(otelzap.NewCore("test", otelzap.WithLoggerProvider(provider)))
+		otelLg.Info("information")
+		require.NoError(t, otelLg.Sync())
+		require.NoError(t, shutdown(ctx))
+
+		require.Empty(t, exporter.Records())
+	})
 }
 
 func TestNewLoggerProviderNegative(t *testing.T) {

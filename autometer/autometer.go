@@ -96,6 +96,9 @@ func NewMeterProvider(ctx context.Context, options ...Option) (
 		}
 		metricOptions = append(metricOptions, sdkmetric.WithReader(reader))
 	}
+	for _, reader := range cfg.additional {
+		metricOptions = append(metricOptions, sdkmetric.WithReader(reader))
+	}
 
 	provider := sdkmetric.NewMeterProvider(metricOptions...)
 	return provider, provider.Shutdown, nil

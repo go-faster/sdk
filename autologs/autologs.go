@@ -84,17 +84,23 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		logOptions = append(logOptions, sdklog.WithResource(cfg.res))
 	}
 	severity := zapLevelToOTelSeverity(lg.Level())
-	for _, exporter := range exporters {
-		exp, err := newLogExporter(ctx, cfg, exporter)
-		if err != nil {
-			return nil, nil, err
-		}
+	addExporter := func(exp sdklog.Exporter) {
 		logOptions = append(logOptions,
 			sdklog.WithProcessor(&levelFilterProcessor{
 				next:     sdklog.NewBatchProcessor(exp),
 				severity: severity,
 			}),
 		)
+	}
+	for _, exporter := range exporters {
+		exp, err := newLogExporter(ctx, cfg, exporter)
+		if err != nil {
+			return nil, nil, err
+		}
+		addExporter(exp)
+	}
+	for _, exp := range cfg.additional {
+		addExporter(exp)
 	}
 
 	provider := sdklog.NewLoggerProvider(logOptions...)

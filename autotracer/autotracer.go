@@ -91,6 +91,9 @@ func NewTracerProvider(ctx context.Context, options ...Option) (
 		}
 		traceOptions = append(traceOptions, sdktrace.WithBatcher(exp))
 	}
+	for _, exp := range cfg.additional {
+		traceOptions = append(traceOptions, sdktrace.WithBatcher(exp))
+	}
 
 	provider := sdktrace.NewTracerProvider(traceOptions...)
 	return provider, provider.Shutdown, nil

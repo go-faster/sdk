@@ -43,6 +43,44 @@ func TestNewMeterProvider(t *testing.T) {
 			})
 		}
 	})
+	t.Run("Additional", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "stdout")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithWriter(io.Discard),
+			autometer.WithAdditionalExporters(reader),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(ctx, &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+	})
+	t.Run("AdditionalNone", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "none")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithAdditionalExporters(reader),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.ErrorContains(t, reader.Collect(ctx, &rm), "not registered")
+	})
 	t.Run("Multiple", func(t *testing.T) {
 		t.Setenv("OTEL_METRICS_EXPORTER", "first,second")
 
