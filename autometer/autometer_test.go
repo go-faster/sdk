@@ -3,9 +3,15 @@ package autometer_test
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
+	"github.com/go-faster/errors"
 	"github.com/stretchr/testify/require"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/go-faster/sdk/autometer"
@@ -25,19 +31,148 @@ func TestNewMeterProvider(t *testing.T) {
 		require.NoError(t, stop(ctx))
 	})
 	t.Run("Negative", func(t *testing.T) {
-		t.Setenv("OTEL_METRICS_EXPORTER", "unsupported")
-		meter, stop, err := autometer.NewMeterProvider(ctx, autometer.WithResource(res))
-		require.Error(t, err)
-		require.Nil(t, meter)
-		require.Nil(t, stop)
+		for _, exp := range []string{
+			"unsupported",
+			"none,stdout",
+			"stdout,none",
+			",",
+		} {
+			t.Run(exp, func(t *testing.T) {
+				t.Setenv("OTEL_METRICS_EXPORTER", exp)
+				meter, stop, err := autometer.NewMeterProvider(ctx, autometer.WithResource(res))
+				require.Error(t, err)
+				require.Nil(t, meter)
+				require.Nil(t, stop)
+			})
+		}
+	})
+	t.Run("PartiallyUnsupported", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "unsupported,first")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithLookupExporter(func(ctx context.Context, name string) (sdkmetric.Reader, bool, error) {
+				return reader, name == "first", nil
+			}),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(ctx, &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+	})
+	t.Run("AdditionalEndpoints", func(t *testing.T) {
+		var requests atomic.Int64
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		t.Setenv("OTEL_METRICS_EXPORTER", "stdout")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+		t.Setenv("GOFASTER_OTLP_METRICS_ENDPOINTS", srv.URL)
+
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithWriter(io.Discard),
+		)
+		require.NoError(t, err)
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		// Shutdown flushes readers.
+		require.NoError(t, stop(ctx))
+		require.Equal(t, int64(1), requests.Load())
+	})
+	t.Run("Additional", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "stdout")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithWriter(io.Discard),
+			autometer.WithAdditionalExporters(reader),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(ctx, &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+	})
+	t.Run("AdditionalNone", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "none")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithAdditionalExporters(reader),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.ErrorContains(t, reader.Collect(ctx, &rm), "not registered")
+	})
+	t.Run("Multiple", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "first,second")
+
+		readers := map[string]*sdkmetric.ManualReader{
+			"first":  sdkmetric.NewManualReader(),
+			"second": sdkmetric.NewManualReader(),
+		}
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithLookupExporter(func(ctx context.Context, name string) (sdkmetric.Reader, bool, error) {
+				reader, ok := readers[name]
+				if !ok {
+					return nil, false, errors.Errorf("unexpected exporter %q", name)
+				}
+				return reader, true, nil
+			}),
+		)
+		require.NoError(t, err)
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		for name, reader := range readers {
+			var rm metricdata.ResourceMetrics
+			require.NoErrorf(t, reader.Collect(ctx, &rm), "reader %q", name)
+			require.Lenf(t, rm.ScopeMetrics, 1, "reader %q", name)
+			require.Lenf(t, rm.ScopeMetrics[0].Metrics, 1, "reader %q", name)
+			require.Equal(t, "test_counter", rm.ScopeMetrics[0].Metrics[0].Name)
+		}
+		require.NoError(t, stop(ctx))
 	})
 	t.Run("All", func(t *testing.T) {
 		for _, exp := range []string{
 			"none",
 			"stdout",
 			"stderr",
+			"console",
 			// "otlp", // TODO: add non-blocking dial
 			"prometheus",
+			"stdout,stderr",
+			"stdout,stdout",
 		} {
 			t.Run(exp, func(t *testing.T) {
 				t.Setenv("OTEL_METRICS_EXPORTER", exp)

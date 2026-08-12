@@ -25,8 +25,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-faster/sdk/internal/pool"
 	"github.com/stretchr/testify/require"
+
+	"github.com/go-faster/sdk/internal/pool"
 )
 
 type pooledValue[T any] struct {
