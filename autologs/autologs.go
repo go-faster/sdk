@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -61,6 +62,12 @@ type ShutdownFunc func(ctx context.Context) error
 // NewLoggerProvider initializes new [log.LoggerProvider] with the given options from environment variables.
 //
 // OTEL_LOGS_EXPORTER is a comma-separated list of exporters, all of them are used.
+// Exporters that fail to initialize are logged and skipped, error is returned only
+// if none of them could be set up.
+//
+// GOFASTER_OTLP_LOGS_ENDPOINTS (or GOFASTER_OTLP_ENDPOINTS) is a comma-separated
+// list of additional OTLP endpoints to fan out logs to. Not defined by the
+// OpenTelemetry specification, where OTEL_EXPORTER_OTLP_ENDPOINT is singular.
 func NewLoggerProvider(ctx context.Context, options ...Option) (
 	logProvider log.LoggerProvider,
 	logShutdown ShutdownFunc,
@@ -69,7 +76,10 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 	cfg := newConfig(options)
 	lg := zctx.From(ctx)
 
-	const envName = "OTEL_LOGS_EXPORTER"
+	const (
+		signalName = "LOGS"
+		envName    = "OTEL_" + signalName + "_EXPORTER"
+	)
 	exporters, err := autoenv.ParseExporters(getEnvOr(envName, expOTLP))
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "parse %s", envName)
@@ -79,7 +89,11 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 		return noop.NewLoggerProvider(), nop, nil
 	}
 
-	var logOptions []sdklog.LoggerProviderOption
+	var (
+		logOptions []sdklog.LoggerProviderOption
+		setupErrs  []error
+		configured int
+	)
 	if cfg.res != nil {
 		logOptions = append(logOptions, sdklog.WithResource(cfg.res))
 	}
@@ -91,50 +105,96 @@ func NewLoggerProvider(ctx context.Context, options ...Option) (
 				severity: severity,
 			}),
 		)
+		configured++
 	}
 	for _, exporter := range exporters {
 		exp, err := newLogExporter(ctx, cfg, exporter)
 		if err != nil {
-			return nil, nil, err
+			// Single broken exporter should not take down the rest of them.
+			lg.Warn("Failed to setup logs exporter",
+				zap.String("exporter", exporter),
+				zap.Error(err),
+			)
+			setupErrs = append(setupErrs, err)
+			continue
 		}
+		addExporter(exp)
+	}
+	for _, endpoint := range autoenv.AdditionalEndpoints(signalName) {
+		exp, err := newOTLPExporter(ctx, endpoint)
+		if err != nil {
+			lg.Warn("Failed to setup additional OTLP logs exporter",
+				zap.String("endpoint", endpoint),
+				zap.Error(err),
+			)
+			setupErrs = append(setupErrs, err)
+			continue
+		}
+		lg.Debug("Using additional OTLP logs exporter", zap.String("endpoint", endpoint))
 		addExporter(exp)
 	}
 	for _, exp := range cfg.additional {
 		addExporter(exp)
+	}
+	if configured == 0 {
+		return nil, nil, errors.Join(setupErrs...)
 	}
 
 	provider := sdklog.NewLoggerProvider(logOptions...)
 	return provider, provider.Shutdown, nil
 }
 
+// newOTLPExporter creates OTLP exporter, endpoint overrides OTEL_EXPORTER_OTLP_ENDPOINT if set.
+func newOTLPExporter(ctx context.Context, endpoint string) (sdklog.Exporter, error) {
+	lg := zctx.From(ctx)
+
+	proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
+	if proto == "" {
+		proto = os.Getenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL")
+	}
+	if proto == "" {
+		proto = defaultProto
+	}
+	lg.Debug("Using OTLP logs exporter", zap.String("protocol", proto))
+	switch proto {
+	case protoHTTP, protoHTTPProtobuf:
+		var opts []otlploghttp.Option
+		switch {
+		case endpoint == "":
+		case strings.Contains(endpoint, "://"):
+			opts = append(opts, otlploghttp.WithEndpointURL(endpoint))
+		default:
+			opts = append(opts, otlploghttp.WithEndpoint(endpoint))
+		}
+		exp, err := otlploghttp.New(ctx, opts...)
+		if err != nil {
+			return nil, errors.Wrap(err, "create OTLP HTTP logs exporter")
+		}
+		return exp, nil
+	case protoGRPC:
+		var opts []otlploggrpc.Option
+		switch {
+		case endpoint == "":
+		case strings.Contains(endpoint, "://"):
+			opts = append(opts, otlploggrpc.WithEndpointURL(endpoint))
+		default:
+			opts = append(opts, otlploggrpc.WithEndpoint(endpoint))
+		}
+		exp, err := otlploggrpc.New(ctx, opts...)
+		if err != nil {
+			return nil, errors.Wrap(err, "create OTLP gRPC logs exporter")
+		}
+		return exp, nil
+	default:
+		return nil, errors.Errorf("unsupported logs otlp protocol %q", proto)
+	}
+}
+
 func newLogExporter(ctx context.Context, cfg config, exporter string) (sdklog.Exporter, error) {
 	lg := zctx.From(ctx)
 	switch exporter {
 	case expOTLP:
-		proto := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
-		if proto == "" {
-			proto = os.Getenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL")
-		}
-		if proto == "" {
-			proto = defaultProto
-		}
-		lg.Debug("Using OTLP logs exporter", zap.String("protocol", proto))
-		switch proto {
-		case protoHTTP, protoHTTPProtobuf:
-			exp, err := otlploghttp.New(ctx)
-			if err != nil {
-				return nil, errors.Wrap(err, "create OTLP HTTP logs exporter")
-			}
-			return exp, nil
-		case protoGRPC:
-			exp, err := otlploggrpc.New(ctx)
-			if err != nil {
-				return nil, errors.Wrap(err, "create OTLP gRPC logs exporter")
-			}
-			return exp, nil
-		default:
-			return nil, errors.Errorf("unsupported logs otlp protocol %q", proto)
-		}
+		return newOTLPExporter(ctx, "")
 	case writerStdout, writerStderr, expConsole:
 		lg.Debug("Using stdout log exporter", zap.String("writer", exporter))
 		writer := cfg.writer

@@ -6,6 +6,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAdditionalEndpoints(t *testing.T) {
+	t.Run("Unset", func(t *testing.T) {
+		t.Setenv("GOFASTER_OTLP_ENDPOINTS", "")
+		t.Setenv("GOFASTER_OTLP_TRACES_ENDPOINTS", "")
+		require.Empty(t, AdditionalEndpoints("TRACES"))
+	})
+	t.Run("Common", func(t *testing.T) {
+		t.Setenv("GOFASTER_OTLP_ENDPOINTS", "http://a:4317, http://b:4317 ,,http://a:4317")
+		require.Equal(t, []string{"http://a:4317", "http://b:4317"}, AdditionalEndpoints("TRACES"))
+	})
+	t.Run("SignalOverride", func(t *testing.T) {
+		t.Setenv("GOFASTER_OTLP_ENDPOINTS", "http://a:4317")
+		t.Setenv("GOFASTER_OTLP_TRACES_ENDPOINTS", "http://b:4317")
+		require.Equal(t, []string{"http://b:4317"}, AdditionalEndpoints("TRACES"))
+		require.Equal(t, []string{"http://a:4317"}, AdditionalEndpoints("LOGS"))
+	})
+}
+
 func TestParseExporters(t *testing.T) {
 	tests := []struct {
 		value   string

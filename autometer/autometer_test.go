@@ -3,6 +3,9 @@ package autometer_test
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/go-faster/errors"
@@ -42,6 +45,53 @@ func TestNewMeterProvider(t *testing.T) {
 				require.Nil(t, stop)
 			})
 		}
+	})
+	t.Run("PartiallyUnsupported", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXPORTER", "unsupported,first")
+
+		reader := sdkmetric.NewManualReader()
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithLookupExporter(func(ctx context.Context, name string) (sdkmetric.Reader, bool, error) {
+				return reader, name == "first", nil
+			}),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(ctx, &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+	})
+	t.Run("AdditionalEndpoints", func(t *testing.T) {
+		var requests atomic.Int64
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		t.Setenv("OTEL_METRICS_EXPORTER", "stdout")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+		t.Setenv("GOFASTER_OTLP_METRICS_ENDPOINTS", srv.URL)
+
+		meter, stop, err := autometer.NewMeterProvider(ctx,
+			autometer.WithResource(res),
+			autometer.WithWriter(io.Discard),
+		)
+		require.NoError(t, err)
+
+		counter, err := meter.Meter("test").Int64Counter("test_counter")
+		require.NoError(t, err)
+		counter.Add(ctx, 1)
+
+		// Shutdown flushes readers.
+		require.NoError(t, stop(ctx))
+		require.Equal(t, int64(1), requests.Load())
 	})
 	t.Run("Additional", func(t *testing.T) {
 		t.Setenv("OTEL_METRICS_EXPORTER", "stdout")

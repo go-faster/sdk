@@ -3,6 +3,8 @@ package autologs_test
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -131,6 +133,51 @@ func TestNewLoggerProviderAdditionalExporters(t *testing.T) {
 
 		require.Empty(t, exporter.Records())
 	})
+}
+
+func TestNewLoggerProviderPartiallyUnsupported(t *testing.T) {
+	ctx := zctx.Base(context.Background(), zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel)))
+	t.Setenv("OTEL_LOGS_EXPORTER", "unsupported,first")
+
+	exporter := &testLogExporter{}
+	provider, shutdown, err := autologs.NewLoggerProvider(ctx,
+		autologs.WithLookupExporter(func(ctx context.Context, name string) (sdklog.Exporter, bool, error) {
+			return exporter, name == "first", nil
+		}),
+	)
+	require.NoError(t, err)
+
+	otelLg := zap.New(otelzap.NewCore("test", otelzap.WithLoggerProvider(provider)))
+	otelLg.Info("information")
+	require.NoError(t, otelLg.Sync())
+	require.NoError(t, shutdown(ctx))
+
+	require.Len(t, exporter.Records(), 1)
+}
+
+func TestNewLoggerProviderAdditionalEndpoints(t *testing.T) {
+	ctx := zctx.Base(context.Background(), zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel)))
+
+	var requests atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	t.Setenv("OTEL_LOGS_EXPORTER", "stdout")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("GOFASTER_OTLP_LOGS_ENDPOINTS", srv.URL)
+
+	provider, shutdown, err := autologs.NewLoggerProvider(ctx, autologs.WithWriter(io.Discard))
+	require.NoError(t, err)
+
+	otelLg := zap.New(otelzap.NewCore("test", otelzap.WithLoggerProvider(provider)))
+	otelLg.Info("information")
+	require.NoError(t, otelLg.Sync())
+	require.NoError(t, shutdown(ctx))
+
+	require.Equal(t, int64(1), requests.Load())
 }
 
 func TestNewLoggerProviderNegative(t *testing.T) {

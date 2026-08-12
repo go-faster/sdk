@@ -3,6 +3,9 @@ package autotracer_test
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/go-faster/errors"
@@ -49,6 +52,46 @@ func TestNewTracerProvider(t *testing.T) {
 				require.NoError(t, stop(ctx))
 			})
 		}
+	})
+	t.Run("PartiallyUnsupported", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_EXPORTER", "unsupported,first")
+
+		exp := tracetest.NewInMemoryExporter()
+		tracer, stop, err := autotracer.NewTracerProvider(ctx,
+			autotracer.WithLookupExporter(func(ctx context.Context, name string) (sdktrace.SpanExporter, bool, error) {
+				return exp, name == "first", nil
+			}),
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		_, span := tracer.Tracer("test").Start(ctx, "test")
+		span.End()
+		forceFlush(t, ctx, tracer)
+
+		require.Len(t, exp.GetSpans(), 1)
+	})
+	t.Run("AdditionalEndpoints", func(t *testing.T) {
+		var requests atomic.Int64
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		t.Setenv("OTEL_TRACES_EXPORTER", "stdout")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+		t.Setenv("GOFASTER_OTLP_TRACES_ENDPOINTS", srv.URL)
+
+		tracer, stop, err := autotracer.NewTracerProvider(ctx, autotracer.WithWriter(io.Discard))
+		require.NoError(t, err)
+		defer func() { require.NoError(t, stop(ctx)) }()
+
+		_, span := tracer.Tracer("test").Start(ctx, "test")
+		span.End()
+		forceFlush(t, ctx, tracer)
+
+		require.Equal(t, int64(1), requests.Load())
 	})
 	t.Run("Negative", func(t *testing.T) {
 		for _, exp := range []string{
