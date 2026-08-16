@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -41,8 +42,8 @@ const (
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
-// Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
-// with exitCodeWatchdog.
+// Context is canceled on SIGINT or SIGTERM. After watchdogTimeout application is forcefully
+// terminated with exitCodeWatchdog.
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
@@ -92,7 +93,12 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 	ctx = zctx.Base(ctx, lg)
 
 	// Explicit context for graceful shutdown.
-	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+	//
+	// SIGTERM is what a container runtime (and systemd) stops a process with, and the Go runtime's
+	// default disposition for it is immediate termination — so an application that only watched
+	// SIGINT would skip its shutdown entirely on every orderly stop, losing whatever it flushes
+	// there.
+	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	if opts.modulePath != "" {
