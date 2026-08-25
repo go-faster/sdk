@@ -3,7 +3,7 @@ module github.com/go-faster/sdk
 go 1.25.0
 
 require (
-	github.com/KimMachineGun/automemlimit v0.7.5
+	github.com/KimMachineGun/automemlimit v1.0.0
 	github.com/go-faster/errors v0.8.0
 	github.com/go-faster/jx v1.2.0
 	github.com/go-faster/yaml v0.4.6
