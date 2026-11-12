@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 
 	"github.com/go-faster/sdk/autologs"
@@ -87,50 +88,50 @@ func eventToLogRecord(e Event) log.Record {
 	r.SetTimestamp(e.Time)
 	r.SetSeverityText(strconv.Itoa(int(e.Severity)))
 	r.SetSeverity(severityToOTelSeverity(e.Severity))
-	r.SetBody(log.StringValue(e.Message))
+	r.SetBody(attribute.StringValue(e.Message))
 	r.AddAttributes(eventToLogAttributes(e)...)
 	return r
 }
 
-func eventToLogAttributes(e Event) []log.KeyValue {
-	attrs := []log.KeyValue{
-		log.String("event.id", e.ID),
-		log.String("event.type", string(e.Type)),
-		log.String("event.action", e.Action),
-		log.String("event.result", string(e.Result)),
-		log.Int("event.severity", int(e.Severity)),
-		log.String("event.reason", e.Reason),
-		log.String("actor.id", e.ActorID),
-		log.String("actor.type", string(e.ActorType)),
-		log.String("actor.session_id", e.SessionID),
-		log.String("actor.auth_method", e.AuthMethod),
-		log.String("target.type", e.TargetType),
-		log.String("target.id", e.TargetID),
-		log.String("target.old_value", e.OldValue),
-		log.String("target.new_value", e.NewValue),
-		log.String("source.ip", e.SourceIP),
-		log.Int("source.port", e.SourcePort),
-		log.String("destination.ip", e.DestIP),
-		log.Int("destination.port", e.DestPort),
-		log.String("source.host", e.SourceHost),
-		log.String("destination.host", e.DestHost),
-		log.String("user_agent", e.UserAgent),
-		log.String("request.id", e.RequestID),
-		log.String("service.name", e.Service),
-		log.String("service.component", e.Component),
-		log.String("deployment.environment", e.Environment),
-		log.String("service.version", e.Version),
-		log.String("audit.schema_version", e.SchemaVersion),
-		log.String("audit.correlation_id", e.CorrelationID),
+func eventToLogAttributes(e Event) []attribute.KeyValue {
+	attrs := []attribute.KeyValue{
+		attribute.String("event.id", e.ID),
+		attribute.String("event.type", string(e.Type)),
+		attribute.String("event.action", e.Action),
+		attribute.String("event.result", string(e.Result)),
+		attribute.Int("event.severity", int(e.Severity)),
+		attribute.String("event.reason", e.Reason),
+		attribute.String("actor.id", e.ActorID),
+		attribute.String("actor.type", string(e.ActorType)),
+		attribute.String("actor.session_id", e.SessionID),
+		attribute.String("actor.auth_method", e.AuthMethod),
+		attribute.String("target.type", e.TargetType),
+		attribute.String("target.id", e.TargetID),
+		attribute.String("target.old_value", e.OldValue),
+		attribute.String("target.new_value", e.NewValue),
+		attribute.String("source.ip", e.SourceIP),
+		attribute.Int("source.port", e.SourcePort),
+		attribute.String("destination.ip", e.DestIP),
+		attribute.Int("destination.port", e.DestPort),
+		attribute.String("source.host", e.SourceHost),
+		attribute.String("destination.host", e.DestHost),
+		attribute.String("user_agent", e.UserAgent),
+		attribute.String("request.id", e.RequestID),
+		attribute.String("service.name", e.Service),
+		attribute.String("service.component", e.Component),
+		attribute.String("deployment.environment", e.Environment),
+		attribute.String("service.version", e.Version),
+		attribute.String("audit.schema_version", e.SchemaVersion),
+		attribute.String("audit.correlation_id", e.CorrelationID),
 	}
 	if e.TraceID != "" {
-		attrs = append(attrs, log.String("trace_id", e.TraceID))
+		attrs = append(attrs, attribute.String("trace_id", e.TraceID))
 	}
 	if e.SpanID != "" {
-		attrs = append(attrs, log.String("span_id", e.SpanID))
+		attrs = append(attrs, attribute.String("span_id", e.SpanID))
 	}
 	for k, v := range e.Attributes {
-		attrs = append(attrs, log.String("audit.attr."+k, v))
+		attrs = append(attrs, attribute.String("audit.attr."+k, v))
 	}
 	return attrs
 }

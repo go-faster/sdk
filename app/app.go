@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -23,6 +24,7 @@ import (
 	"github.com/go-faster/sdk/internal/zapencoder"
 
 	"github.com/go-faster/sdk/autologs"
+	"github.com/go-faster/sdk/cliversion"
 	"github.com/go-faster/sdk/zctx"
 )
 
@@ -40,32 +42,19 @@ const (
 // Run f until interrupt.
 //
 // If errors.Is(err, ctx.Err()) is valid for returned error, shutdown is considered graceful.
-// Context is cancelled on SIGINT. After watchdogTimeout application is forcefully terminated
-// with exitCodeWatchdog.
+// Context is canceled on SIGINT or SIGTERM. After watchdogTimeout application is forcefully
+// terminated with exitCodeWatchdog.
 func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...Option) {
 	// Apply options.
 	opts := options{
-		zapConfig: zap.NewProductionConfig(),
-		zapTee:    true,
-		otelZap:   true,
-		ctx:       context.Background(),
-		resourceOptions: []resource.Option{
-			resource.WithProcessRuntimeDescription(),
-			resource.WithProcessRuntimeVersion(),
-			resource.WithProcessRuntimeName(),
-			resource.WithOS(),
-			resource.WithTelemetrySDK(),
-			resource.WithHost(),
-			resource.WithProcess(),
-			resource.WithFromEnv(),
-		},
+		zapConfig:       zap.NewProductionConfig(),
+		zapTee:          true,
+		otelZap:         true,
+		ctx:             context.Background(),
+		resourceOptions: defaultResourceOptions(),
 	}
 	opts.resourceFn = func(ctx context.Context) (*resource.Resource, error) {
-		r, err := resource.New(ctx, opts.resourceOptions...)
-		if err != nil {
-			return nil, errors.Wrap(err, "new")
-		}
-		return resource.Merge(resource.Default(), r)
+		return newResource(ctx, opts.resourceOptions)
 	}
 	if v, err := strconv.ParseBool(os.Getenv("OTEL_ZAP_TEE")); err == nil {
 		// Override default.
@@ -104,10 +93,28 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 	ctx = zctx.Base(ctx, lg)
 
 	// Explicit context for graceful shutdown.
-	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+	//
+	// SIGTERM is what a container runtime (and systemd) stops a process with, and the Go runtime's
+	// default disposition for it is immediate termination — so an application that only watched
+	// SIGINT would skip its shutdown entirely on every orderly stop, losing whatever it flushes
+	// there.
+	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	lg.Info("Starting")
+	if opts.modulePath != "" {
+		if info, ok := cliversion.GetInfo(opts.modulePath); ok {
+			lg.Info("Starting",
+				zap.String("version", info.Version),
+				zap.String("commit", info.Commit),
+				zap.String("go_version", info.GoVersion),
+				zap.Bool("modified", info.Modified),
+			)
+		} else {
+			lg.Info("Starting")
+		}
+	} else {
+		lg.Info("Starting")
+	}
 	res, err := opts.resourceFn(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get resource: %v", err))

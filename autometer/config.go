@@ -11,9 +11,10 @@ import (
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res    *resource.Resource
-	writer io.Writer
-	lookup LookupExporter
+	res        *resource.Resource
+	writer     io.Writer
+	lookup     LookupExporter
+	additional []sdkmetric.Reader
 
 	prom         prometheus.Registerer
 	promCallback func(reg *prometheus.Registry)
@@ -72,6 +73,17 @@ func WithOnPrometheusRegistry(f func(reg *prometheus.Registry)) Option {
 func WithWriter(out io.Writer) Option {
 	return optionFunc(func(conf config) config {
 		conf.writer = out
+		return conf
+	})
+}
+
+// WithAdditionalExporters adds readers used in addition to the ones configured
+// by OTEL_METRICS_EXPORTER, e.g. to fan out metrics to a second backend.
+//
+// Ignored if OTEL_METRICS_EXPORTER is set to "none".
+func WithAdditionalExporters(readers ...sdkmetric.Reader) Option {
+	return optionFunc(func(conf config) config {
+		conf.additional = append(conf.additional, readers...)
 		return conf
 	})
 }

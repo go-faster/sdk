@@ -10,9 +10,10 @@ import (
 
 // config contains configuration options for a LoggerProvider.
 type config struct {
-	res    *resource.Resource
-	writer io.Writer
-	lookup LookupExporter
+	res        *resource.Resource
+	writer     io.Writer
+	lookup     LookupExporter
+	additional []sdklog.Exporter
 }
 
 // newConfig returns a config configured with options.
@@ -54,6 +55,17 @@ func WithResource(res *resource.Resource) Option {
 func WithWriter(out io.Writer) Option {
 	return optionFunc(func(conf config) config {
 		conf.writer = out
+		return conf
+	})
+}
+
+// WithAdditionalExporters adds exporters used in addition to the ones configured
+// by OTEL_LOGS_EXPORTER, e.g. to fan out logs to a second backend.
+//
+// Ignored if OTEL_LOGS_EXPORTER is set to "none".
+func WithAdditionalExporters(exporters ...sdklog.Exporter) Option {
+	return optionFunc(func(conf config) config {
+		conf.additional = append(conf.additional, exporters...)
 		return conf
 	})
 }
