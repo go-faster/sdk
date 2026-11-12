@@ -163,7 +163,7 @@ func Run(f func(ctx context.Context, lg *zap.Logger, t *Telemetry) error, op ...
 		// https://github.com/KimMachineGun/automemlimit
 		// https://tip.golang.org/doc/gc-guide#Memory_limit
 		logger := slog.New(slogzap.Option{Level: slog.LevelDebug, Logger: lg}.NewZapHandler())
-		if _, err := memlimit.SetGoMemLimitWithOpts(memlimit.WithLogger(logger)); err != nil {
+		if _, err := memlimit.Set(memlimit.WithLogger(logger)); err != nil {
 			lg.Warn("Failed to set memory limit", zap.Error(err))
 		}
 	}
